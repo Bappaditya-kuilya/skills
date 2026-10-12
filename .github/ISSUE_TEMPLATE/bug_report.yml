@@ -1,5 +1,5 @@
 name: Bug report
-description: The installer, a script or the skill's output did something wrong.
+description: Installing, a script or the skill's output did something wrong.
 labels: [bug]
 body:
   - type: dropdown
@@ -7,7 +7,7 @@ body:
     attributes:
       label: Area
       options:
-        - Installer (npx github:juliobsz/skills)
+        - Install (npx skills add or the Claude Code plugin)
         - Helper script (audit, shoot, og, font, photos, serve)
         - Skill output (the site the agent built)
         - Docs
@@ -29,7 +29,7 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. npx github:juliobsz/skills --claude
+        1. npx skills add juliobsz/skills -g
         2. ...
   - type: input
     id: agent

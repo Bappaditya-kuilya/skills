@@ -6,5 +6,5 @@
 
 <!-- What you built or ran to verify the change. For skill changes, the prompt you used and a link or screenshot of the result. -->
 
-- [ ] `node bin/install.mjs --dir ./test-output` installs cleanly
+- [ ] `npx skills add . --list` finds the skill
 - [ ] Ran the skill (or the changed script) in an agent and checked the result

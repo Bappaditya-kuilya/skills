@@ -4,15 +4,14 @@
 
 **An agent skill that builds award-caliber websites from one line.**
 
-[![CI](https://github.com/juliobsz/skills/actions/workflows/ci.yml/badge.svg)](https://github.com/juliobsz/skills/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Node 20+](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)](https://nodejs.org)
-[![Claude Code](https://img.shields.io/badge/Claude_Code-supported-d97757)](https://claude.com/claude-code)
-[![Codex](https://img.shields.io/badge/Codex-supported-000000)](https://github.com/openai/codex)
-[![Last commit](https://img.shields.io/github/last-commit/juliobsz/skills)](https://github.com/juliobsz/skills/commits/main)
-[![Stars](https://img.shields.io/github/stars/juliobsz/skills?style=flat)](https://github.com/juliobsz/skills/stargazers)
+[![CI](https://img.shields.io/github/actions/workflow/status/juliobsz/skills/ci.yml?branch=main&label=CI&labelColor=000000&color=0a0a0a&logo=githubactions&logoColor=white)](https://github.com/juliobsz/skills/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-0a0a0a?labelColor=000000)](LICENSE)
+[![Agent Skills](https://img.shields.io/badge/Agent_Skills-compatible-0a0a0a?labelColor=000000)](https://agentskills.io)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-supported-0a0a0a?labelColor=000000&logo=claude&logoColor=white)](https://claude.com/claude-code)
+[![Codex](https://img.shields.io/badge/Codex-supported-0a0a0a?labelColor=000000)](https://github.com/openai/codex)
+[![skills.sh](https://skills.sh/b/juliobsz/skills)](https://skills.sh/juliobsz/skills)
 
-[Demo](#demo) · [Install](#install) · [Usage](#usage) · [How it works](#how-it-works) · [Contributing](#contributing)
+[Demo](#demo) · [Install](#install) · [Usage](#usage) · [How it works](#how-it-works) · [Limits](#limits)
 
 </div>
 
@@ -23,9 +22,94 @@
 That's the whole brief. The agent works as creative director, designer and creative developer
 in one, then hands back a site it has already checked in a real browser.
 
+## Quick start
+
+```bash
+npx skills add wheresryan22/anatomy -g   # optional: interactive isometric explainer figures
+npx skills add juliobsz/skills -g
+```
+
+Open a **new** agent session, then type `/awwwards` or just ask for a website.
+
 ## Demo
 
 https://github.com/user-attachments/assets/0ac28c25-9796-4bce-8fa6-4dcc6df55b8b
+
+## Install
+
+Install with the [skills CLI](https://github.com/vercel-labs/skills). It runs through `npx`, so
+there's nothing to install first, and it detects your agents (Claude Code, Codex, Cursor,
+Gemini CLI, OpenCode, Copilot and more) and lets you pick.
+
+```bash
+npx skills add juliobsz/skills -g
+```
+
+| Command | Result |
+|---|---|
+| `npx skills add juliobsz/skills -g -a claude-code` | Claude Code only (use `codex`, `cursor`… for others) |
+| `npx skills add juliobsz/skills` | This project only, instead of your user folder |
+| `npx skills add juliobsz/skills -g --copy` | Copy the files instead of linking them |
+| `npx skills update -g` | Update to the latest version |
+| `npx skills remove awwwards -g` | Uninstall |
+
+The CLI collects anonymous usage data. Set `DISABLE_TELEMETRY=1` or `DO_NOT_TRACK=1` to turn
+it off.
+
+<details>
+<summary>Claude Code plugin</summary>
+
+If you prefer Claude Code's plugin system, which updates the skill for you:
+
+```
+/plugin install awwwards --marketplace juliobsz/skills
+```
+
+On Claude Code before 2.1.275, run `/plugin marketplace add juliobsz/skills` and then
+`/plugin install awwwards@juliobsz`. The skill then runs as `/awwwards:awwwards`. Use the
+plugin or the skills CLI, not both, or the skill shows up twice.
+</details>
+
+<details>
+<summary>Manual install</summary>
+
+Copy the `awwwards/` folder into your agent's skills directory, for example
+`~/.claude/skills/awwwards`. Any agent that reads `SKILL.md` skills can use it.
+</details>
+
+### Works with /anatomy
+
+[/anatomy](https://github.com/wheresryan22/anatomy) by wheresryan22 is an open-source skill
+for detailed, interactive isometric figures that explain an idea as a real physical object.
+Install it next to `/awwwards` and the site can get one "how it works" section built as a real
+explainer figure, styled to the site's palette and grid.
+
+```bash
+npx skills add wheresryan22/anatomy -g
+```
+
+It's optional. Without it, `/awwwards` builds that section another way, and tells you at the
+end when a figure would have helped.
+
+### Requirements
+
+- **Node 22.20+** for the skills CLI. The helper scripts need Node 20+.
+- **Playwright** in the site's project for screenshots and the OG image. The skill installs it
+  as a dev dependency when it needs it, and uses a Chromium you already have when it can.
+- **A model that can read images**, so the QA loop can look at its own screenshots.
+- **A Vercel, Netlify or Cloudflare account** only if you want it to deploy.
+
+<details>
+<summary>Troubleshooting</summary>
+
+- **`/awwwards` isn't found.** Start a new session; agents read their skills folder at startup.
+  Then run `npx skills list -g` to see where it was installed.
+- **It shows up twice.** You installed it two ways (for example the skills CLI and the plugin).
+  Remove one with `npx skills remove awwwards -g` or `/plugin uninstall awwwards@juliobsz`.
+- **Installed into the wrong agent.** Name the target with `-a`, for example `-a codex`.
+- **Screenshots fail with "Playwright not found".** Run `npm i -D playwright` in the site's
+  project. If it reports no Chromium, run `npx playwright install chromium` once.
+</details>
 
 ## Why
 
@@ -46,64 +130,6 @@ cards, "elevate your brand". This skill replaces that default with a process.
 Its quality bar is the work that wins [Awwwards](https://www.awwwards.com) Site of the Day. The
 site doesn't need to be submitted anywhere; it just has to be that good.
 
-## Quick start
-
-```bash
-npx github:juliobsz/skills
-```
-
-Open a **new** agent session, then type `/awwwards` or just ask for a website.
-
-## Install
-
-One command installs the skill into every agent folder you already have
-(`~/.claude`, `~/.codex`, `~/.agents`). If none exist, it falls back to Claude Code.
-
-| Command | Result |
-|---|---|
-| `npx github:juliobsz/skills` | Install into every detected agent |
-| `npx github:juliobsz/skills awwwards` | Install a single skill by name |
-| `npx github:juliobsz/skills --claude` | Claude Code only (`~/.claude/skills`) |
-| `npx github:juliobsz/skills --codex` | Codex only (`~/.codex/skills`) |
-| `npx github:juliobsz/skills --agents` | Shared agent folder (`~/.agents/skills`) |
-| `npx github:juliobsz/skills --project` | This project only (`./.claude/skills`) |
-| `npx github:juliobsz/skills --dir <path>` | Any skills folder |
-| `npx github:juliobsz/skills --anatomy` | Also install [/anatomy](#works-with-anatomy) without asking |
-| `npx github:juliobsz/skills --no-anatomy` | Skip the /anatomy prompt |
-| `npx github:juliobsz/skills --list` | List available skills |
-| `npx github:juliobsz/skills --uninstall` | Remove it (add `--anatomy` to remove that too) |
-| `npx github:juliobsz/skills --help` | Show all options |
-
-Flags combine, for example `npx github:juliobsz/skills awwwards --claude --codex`.
-Run the install command again to update. Requires Node 20+.
-
-### Works with /anatomy
-
-During install, a checkbox asks whether to add
-[/anatomy](https://github.com/wheresryan22/anatomy) by wheresryan22, an open-source skill for
-detailed, interactive isometric figures. With it installed, `/awwwards` can build one "how it
-works" section as a real explainer figure, styled to the site's palette and grid. Without it,
-the skill works exactly as before. anatomy is downloaded from its own repository, so you always
-get the latest version. Install it on its own any time with
-`npx skills add wheresryan22/anatomy`.
-
-<details>
-<summary>Manual install</summary>
-
-Copy the `awwwards/` folder into your agent's skills directory, for example
-`~/.claude/skills/awwwards`. Any agent that reads `SKILL.md` skills can use it.
-</details>
-
-<details>
-<summary>Troubleshooting</summary>
-
-- **`/awwwards` isn't found.** Start a new session; agents read their skills folder at startup.
-  Then check that `awwwards/SKILL.md` exists in the folder the installer printed.
-- **Installed into the wrong agent.** Name the target explicitly with `--claude`, `--codex`,
-  `--agents` or `--dir <path>`.
-- **Old version after updating.** Re-run the install command. It overwrites the installed copy.
-</details>
-
 ## Usage
 
 Ask in one line and let the agent decide. It writes its assumptions down instead of running a
@@ -115,6 +141,9 @@ a site for my architecture studio in Lisbon, we do small houses
 launch page for a mechanical keyboard called Kestrel, it should feel insane
 redesign this landing page so it could win site of the day
 ```
+
+Better input gives a better site. Your real name, what you do, where you are and two or three
+real projects let the concept come from your story instead of a placeholder.
 
 ## How it works
 
@@ -150,6 +179,16 @@ loading, and keeps content visible without JavaScript or with reduced motion.
 - No purple gradients, glassmorphism or three-card grids unless the concept truly calls for
   them.
 
+## Limits
+
+- **It takes a while.** A full run is concept, design system, build and several rounds of
+  screenshots and fixes. Expect a long session and heavy token use, not a quick snippet.
+- **Results depend on the model.** It was built and tested with Claude Code and Codex. The
+  concept and the visual QA are only as good as the model doing them.
+- **Content is yours to finish.** Without real projects, photos and copy, the site ships with
+  clearly marked placeholders that you replace.
+- **8/10 is its own score.** The rubric keeps it honest, but you're the final judge.
+
 ## Standalone scripts
 
 The helpers in `awwwards/scripts/` work on any site, so you can use them on their own:
@@ -162,8 +201,8 @@ node ~/.claude/skills/awwwards/scripts/shoot.mjs https://your-site.com/ --nav
 | Script | Does |
 |---|---|
 | `audit.mjs` | Crawl a build: SEO, a11y, weight, placeholders, AI-copy tells |
-| `shoot.mjs` | Playwright screenshots, FPS, overflow, tap targets, transitions |
-| `og.mjs` | Render the OG image from the live hero |
+| `shoot.mjs` | Playwright screenshots, FPS, overflow, tap targets, transitions (needs Playwright) |
+| `og.mjs` | Render the OG image from the live hero (needs Playwright) |
 | `font.mjs` | Self-host Fontshare / Google fonts (CSS or `next/font` output) |
 | `photos.mjs` | Contact sheets of free photos for marked placeholders |
 | `serve.mjs` | Static server for build output |
@@ -189,8 +228,8 @@ awwwards/
     nextjs.md         Next.js adapter, layout, metadata, fonts
     astro.md          Astro adapter and layout
     ship.md           final checks and deploy
-  scripts/            zero-dependency Node helpers
-bin/install.mjs       the npx installer
+  scripts/            Node helpers, no dependencies except Playwright for screenshots
+.claude-plugin/       Claude Code plugin marketplace
 .github/              CI workflow, issue and PR templates
 ```
 </details>
@@ -207,11 +246,13 @@ Issues and pull requests are welcome, especially for bugs found in real builds a
 patterns in `awwwards/references/`.
 
 1. Fork the repo and create a branch.
-2. Make the change. A skill is a folder with a `SKILL.md`; the installer discovers any
-   top-level folder that has one, so a new skill needs no registration.
-3. Test it: `node bin/install.mjs --dir ./tmp-skills`, then run the skill in an agent.
+2. Make the change. A skill is a folder with a `SKILL.md`; the skills CLI finds any top-level
+   folder that has one. For the Claude Code plugin, also add an entry to
+   `.claude-plugin/marketplace.json`.
+3. Test it: `npx skills add . -g -a claude-code`, then run the skill in an agent.
 4. Open a pull request. The template asks what changed and what you built to check it; CI
-   checks script syntax, `SKILL.md` frontmatter and the installer on Linux, macOS and Windows.
+   checks script syntax, `SKILL.md` frontmatter, the plugin marketplace and that the skills
+   CLI finds every skill, on Linux, macOS and Windows.
 
 ## Support
 

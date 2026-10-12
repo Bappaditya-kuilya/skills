@@ -2,9 +2,8 @@
 /*
 !/.gitignore
 !/.github/
+!/.claude-plugin/
 !/awwwards/
-!/bin/
-!/package.json
 !/README.md
 !/LICENSE
 

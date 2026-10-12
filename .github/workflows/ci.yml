@@ -25,7 +25,7 @@ jobs:
 
       - name: Syntax check scripts
         shell: bash
-        run: for f in bin/*.mjs */scripts/*.mjs; do node --check "$f" && echo "ok $f"; done
+        run: for f in */scripts/*.mjs; do node --check "$f" && echo "ok $f"; done
 
       - name: Validate SKILL.md frontmatter
         shell: bash
@@ -45,18 +45,29 @@ jobs:
               console.log(`ok ${d}`);
             }'
 
-      - name: Installer smoke test
+      - name: Validate plugin marketplace
         shell: bash
         run: |
-          node bin/install.mjs --help
-          node bin/install.mjs --list
-          node bin/install.mjs --dir ./test-output
-          test -f test-output/awwwards/SKILL.md
-          test -f test-output/awwwards/scripts/audit.mjs
-          node bin/install.mjs awwwards --dir ./test-output --uninstall
-          test ! -e test-output/awwwards
-          if node bin/install.mjs nope --dir ./test-output; then exit 1; fi
+          node -e '
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync(".claude-plugin/marketplace.json", "utf8"));
+            if (!m.name || !m.owner?.name || !m.plugins?.length) throw new Error("marketplace needs name, owner and plugins");
+            for (const p of m.plugins) {
+              if (!p.source.startsWith("./")) throw new Error(`${p.name}: source must start with ./`);
+              if (!fs.existsSync(`${p.source}/SKILL.md`)) throw new Error(`${p.name}: no SKILL.md at ${p.source}`);
+              console.log(`ok ${p.name}`);
+            }'
 
-      - name: Package contents
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 22
-        run: npm pack --dry-run
+      - name: skills CLI finds every skill
+        if: matrix.node == 22 # the skills CLI needs Node 22.20+
+        shell: bash
+        env:
+          DISABLE_TELEMETRY: '1'
+        run: |
+          out=$(npx -y skills@latest add . --list 2>&1)
+          echo "$out"
+          for d in */; do
+            d=${d%/}
+            [ -f "$d/SKILL.md" ] || continue
+            echo "$out" | grep -q "$d" || { echo "skills CLI did not find $d"; exit 1; }
+          done
