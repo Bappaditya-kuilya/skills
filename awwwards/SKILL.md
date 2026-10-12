@@ -112,6 +112,10 @@ Read `references/art-direction.md` and `references/typography.md`, and consult
   works in practice.
 - **Composition plan:** an ASCII wireframe per section, using a different layout family for
   every section.
+- **Explainer figure (optional):** if the site has to show how something works (a product
+  mechanism, a pipeline, a system in a case study) and the `anatomy` skill is available, plan
+  at most one section as an isometric figure built with it. Read `references/anatomy.md` for
+  when it earns its place.
 
 Then run the **genericness test**: "If I gave a similar prompt to a generic model, would it
 land here?" Change any part where the answer is yes, and note what you changed.
@@ -136,6 +140,9 @@ land here?" Change any part where the answer is yes, and note what you changed.
    concept as **one driver module**: a single variable (scroll progress, time, pointer, chapter)
    mapped to every visual that carries the concept, so they always agree. See
    `references/patterns.md`.
+   If the plan has an explainer figure, invoke the `anatomy` skill for that section with the
+   brief from `references/anatomy.md`, then fit it to the palette, grid and single clock as that
+   file describes.
 6. **Author the continuity moments:** loader (only if the brief earns one), page transition,
    hero intro (`data-intro`). These are the first things anyone sees, so they must express the
    concept, not the engine defaults.
@@ -171,6 +178,8 @@ node $SKILL/scripts/shoot.mjs http://127.0.0.1:4400/ --nav --steps 6
   `shoot.mjs <url>/missing-page --out .shots-404`. Inner pages and end states hide the worst
   bugs.
 - Run the failure checklist in `references/quality.md`.
+- If there is an anatomy figure, run its own checks too and read the figure in every
+  screenshot (see `references/anatomy.md`, QA).
 - Score the site with the rubric in `references/quality-bar.md` **as a skeptical critic**,
   citing what you see in specific screenshots. List every fix that would raise a score, then
   make them.
@@ -212,7 +221,8 @@ confirms.
 **Continuity & motion**
 - Animate `transform`, `opacity`, `clip-path` and shader uniforms, never layout properties.
 - Run one clock: everything goes through GSAP's ticker. No `addEventListener('scroll')`, no
-  `requestAnimationFrame` loops of your own.
+  `requestAnimationFrame` loops of your own. This includes code from other skills, such as an
+  anatomy figure's loop.
 - Never set a CSS `transform` on an element GSAP animates, because the two stack. Use
   `gsap.set` or the individual `translate`, `rotate` and `scale` properties.
 - Every page-level effect lives in `onPage()` (or `usePage()` in React) so it is reverted on
@@ -292,6 +302,7 @@ are legitimate when they carry real information and are executed with care.
 | `references/motion.md` | Phase 3 (choreography; loader, transition, hover and scroll recipes) |
 | `references/webgl.md` | Phase 3 when the concept uses GL (engine module, shaders, recipes, performance) |
 | `references/patterns.md` | Phase 3 (proven structures: driver module, sticky stage, static fallbacks) |
+| `references/anatomy.md` | Phase 2/3 when the site explains how something works and the `anatomy` skill is installed |
 | `references/content.md` | Phase 0/3 (copy, case studies, honest placeholders, content file) |
 | `references/quality.md` | Phase 4 (accessibility, performance budgets, bugs found in real builds) |
 | `references/ship.md` | Phase 5 (deploy, OG, final checks) |

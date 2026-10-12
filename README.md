@@ -68,12 +68,24 @@ One command installs the skill into every agent folder you already have
 | `npx github:juliobsz/skills --agents` | Shared agent folder (`~/.agents/skills`) |
 | `npx github:juliobsz/skills --project` | This project only (`./.claude/skills`) |
 | `npx github:juliobsz/skills --dir <path>` | Any skills folder |
+| `npx github:juliobsz/skills --anatomy` | Also install [/anatomy](#works-with-anatomy) without asking |
+| `npx github:juliobsz/skills --no-anatomy` | Skip the /anatomy prompt |
 | `npx github:juliobsz/skills --list` | List available skills |
-| `npx github:juliobsz/skills --uninstall` | Remove it |
+| `npx github:juliobsz/skills --uninstall` | Remove it (add `--anatomy` to remove that too) |
 | `npx github:juliobsz/skills --help` | Show all options |
 
 Flags combine, for example `npx github:juliobsz/skills awwwards --claude --codex`.
 Run the install command again to update. Requires Node 20+.
+
+### Works with /anatomy
+
+During install, a checkbox asks whether to add
+[/anatomy](https://github.com/wheresryan22/anatomy) by wheresryan22, an open-source skill for
+detailed, interactive isometric figures. With it installed, `/awwwards` can build one "how it
+works" section as a real explainer figure, styled to the site's palette and grid. Without it,
+the skill works exactly as before. anatomy is downloaded from its own repository, so you always
+get the latest version. Install it on its own any time with
+`npx skills add wheresryan22/anatomy`.
 
 <details>
 <summary>Manual install</summary>
