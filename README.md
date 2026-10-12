@@ -14,8 +14,6 @@
 </p>
 
 <p>
-  <a href="https://github.com/juliobsz/skills/archive/refs/heads/main.zip"><img src="https://img.shields.io/badge/Download-ZIP-1b1b19?style=for-the-badge&logo=github&logoColor=white" alt="Download ZIP"></a>
-  &nbsp;
   <a href="#install"><img src="https://img.shields.io/badge/Install-npx_skills_add-d7d7d0?style=for-the-badge&labelColor=1b1b19&logo=npm&logoColor=white" alt="Install with npx skills add"></a>
 </p>
 
