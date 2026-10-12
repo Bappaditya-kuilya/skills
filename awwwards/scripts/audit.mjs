@@ -50,8 +50,9 @@ const TELLS = [
   [/\b(elevate|seamless(ly)?|unleash|revolutioni[sz]e|cutting-edge|next-gen|synergy|game-chang)/i, 'filler marketing verb'],
   [/\b(crafting digital experiences|pixel[- ]perfect|passionate about)\b/i, 'portfolio cliche'],
   [/scroll to explore/i, 'generic scroll cue copy'],
-  [/\bwhere\s+\S+(?:\s+\S+){0,4}\s+meets?\s+\S+/i, 'portfolio cliche'],
-  [/(?:\bnot\s+just\b|\b\w+n['’]t\s+just\b).+?\bbut\b/i, 'portfolio cliche'],
+  // Page text is one line, so both phrases stop at sentence ends to avoid matching across sentences.
+  [/\bwhere\s+(?:[^\s.!?]+\s+){1,3}meets?\s+[^\s.!?,;:]+/i, 'portfolio cliche'],
+  [/\b(?:not|\w+n['’]t)\s+just\b[^.!?]{1,80}?\bbut\b/i, 'portfolio cliche'],
 ];
 
 // Crawl
