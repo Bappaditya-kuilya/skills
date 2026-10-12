@@ -1,6 +1,7 @@
 # Keep this repository limited to the actual skill.
 /*
 !/.gitignore
+!/.github/
 !/awwwards/
 !/bin/
 !/package.json

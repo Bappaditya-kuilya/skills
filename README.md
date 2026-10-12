@@ -4,6 +4,8 @@
 
 **An agent skill that builds award-caliber websites from one line.**
 
+[![CI](https://github.com/juliobsz/skills/actions/workflows/ci.yml/badge.svg)](https://github.com/juliobsz/skills/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Node 20+](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-supported-d97757)](https://claude.com/claude-code)
 [![Codex](https://img.shields.io/badge/Codex-supported-000000)](https://github.com/openai/codex)
@@ -177,6 +179,7 @@ awwwards/
     ship.md           final checks and deploy
   scripts/            zero-dependency Node helpers
 bin/install.mjs       the npx installer
+.github/              CI workflow, issue and PR templates
 ```
 </details>
 
@@ -195,8 +198,13 @@ patterns in `awwwards/references/`.
 2. Make the change. A skill is a folder with a `SKILL.md`; the installer discovers any
    top-level folder that has one, so a new skill needs no registration.
 3. Test it: `node bin/install.mjs --dir ./tmp-skills`, then run the skill in an agent.
-4. Open a pull request describing what changed and what you built to check it.
+4. Open a pull request. The template asks what changed and what you built to check it; CI
+   checks script syntax, `SKILL.md` frontmatter and the installer on Linux, macOS and Windows.
 
 ## Support
 
-Found a bug or have an idea? [Open an issue](https://github.com/juliobsz/skills/issues).
+Found a bug or have an idea? [Open an issue](https://github.com/juliobsz/skills/issues/new/choose).
+
+## License
+
+[MIT](LICENSE) © juliobsz
