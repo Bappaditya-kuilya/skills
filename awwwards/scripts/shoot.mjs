@@ -1,48 +1,77 @@
 #!/usr/bin/env node
 // Visual QA: screenshots a running site the way a visitor experiences it (any framework).
-//   node shoot.mjs <url> [--out .shots] [--steps 6] [--nav]
-// Produces: desktop frames (loader end + scroll steps), mobile frames, reduced-motion frame,
-// optional page-transition frames (--nav clicks the first internal link), plus report.json
-// with console errors, failed requests, FPS sample and layout metrics. Read every PNG it writes.
+//   node shoot.mjs <url> [--out .shots] [--steps 6] [--nav] [--crawl] [--max 8] [--tabs 12] [--no-throttle]
+// Per page: desktop frames (loader end + scroll steps), mobile frames on a throttled mid-range
+// phone (4x CPU, slow 4G), reduced-motion frames, keyboard-focus frames, optional page-transition
+// frames (--nav clicks the first internal link), plus report.json with console errors, failed
+// requests, LCP/CLS, FPS, layout metrics, axe-core violations and the tab order.
+// --crawl shoots one page of every type plus the 404 into <out>/<page>/ and writes summary.json.
+// Read every PNG it writes.
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { launch } from './browser.mjs';
 
 const args = process.argv.slice(2);
-const url = args.find((a) => !a.startsWith('--'));
-if (!url) { console.error('usage: node shoot.mjs <url> [--out dir] [--steps n] [--nav]'); process.exit(1); }
+const valued = ['--out', '--steps', '--max', '--tabs'];
+const url = args.find((a, i) => !a.startsWith('--') && !valued.includes(args[i - 1]));
+if (!url) { console.error('usage: node shoot.mjs <url> [--out dir] [--steps n] [--nav] [--crawl] [--max n] [--tabs n] [--no-throttle]'); process.exit(1); }
 const opt = (k, d) => { const i = args.indexOf(`--${k}`); return i > -1 ? args[i + 1] : d; };
-const out = path.resolve(opt('out', '.shots'));
+const outRoot = path.resolve(opt('out', '.shots'));
 const steps = parseInt(opt('steps', '6'), 10);
+const tabs = parseInt(opt('tabs', '12'), 10);
 const nav = args.includes('--nav');
-fs.mkdirSync(out, { recursive: true });
-for (const f of fs.readdirSync(out)) if (f.endsWith('.png')) fs.rmSync(path.join(out, f));
+const crawl = args.includes('--crawl');
+const throttle = !args.includes('--no-throttle');
 
-const browser = await launch();
-const report = { url, errors: [], failed: [], desktop: {}, mobile: {}, files: [] };
-const shot = async (page, name) => {
-  const file = path.join(out, `${name}.png`);
-  await page.screenshot({ path: file });
-  report.files.push(file);
+// axe-core from the project, else from the CDN; without it the a11y pass is skipped.
+async function loadAxe() {
+  try { return fs.readFileSync(createRequire(path.join(process.cwd(), 'noop.js')).resolve('axe-core/axe.min.js'), 'utf8'); } catch {}
+  try { const r = await fetch('https://cdn.jsdelivr.net/npm/axe-core@4/axe.min.js'); if (r.ok) return await r.text(); } catch {}
+  return null;
+}
+
+// One representative URL per page type: home, each top-level page, one item per collection
+// (/work/a and /work/b are both "work-item"), plus a missing URL for the 404.
+async function pickPages(start, max) {
+  const origin = new URL(start).origin;
+  const types = new Map([['home', new URL(start).href]]);
+  const queue = [new URL(start).href];
+  const seen = new Set(queue);
+  for (let fetched = 0; queue.length && fetched < 30 && types.size < max; fetched++) {
+    const u = queue.shift();
+    let html = '';
+    try { const r = await fetch(u); if (!r.ok || !(r.headers.get('content-type') || '').includes('html')) continue; html = await r.text(); } catch { continue; }
+    for (const m of html.matchAll(/<a\b[^>]*\shref=["']([^"'#]+)[^"']*["']/gi)) {
+      let next;
+      try { next = new URL(m[1].replace(/&amp;/g, '&'), u); } catch { continue; }
+      next.hash = ''; next.search = '';
+      if (next.origin !== origin || seen.has(next.href) || /\.(?!html?$)[a-z0-9]{2,5}$/i.test(next.pathname)) continue;
+      seen.add(next.href);
+      const segs = next.pathname.split('/').filter(Boolean);
+      if (!segs.length) continue;
+      const type = segs.length === 1 ? segs[0] : `${segs[0]}-item`;
+      if (!types.has(type) && types.size < max) types.set(type, next.href);
+      queue.push(next.href);
+    }
+  }
+  types.set('404', new URL(`/__shoot-missing-page-${Date.now()}`, origin).href);
+  return [...types].map(([name, href]) => ({ name: name.replace(/[^a-z0-9-]/gi, '_'), url: href }));
+}
+
+// Runs before any page script: records LCP (and its element) and load-time CLS.
+const vitalsInit = () => {
+  window.__vitals = { lcpMs: null, lcpElement: null, cls: 0 };
+  const describe = (e) => !e ? null : e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/)[0] : '');
+  try {
+    new PerformanceObserver((l) => { for (const e of l.getEntries()) { window.__vitals.lcpMs = Math.round(e.startTime); window.__vitals.lcpElement = describe(e.element) || e.url || null; } }).observe({ type: 'largest-contentful-paint', buffered: true });
+    new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__vitals.cls += e.value; }).observe({ type: 'layout-shift', buffered: true });
+  } catch {}
 };
-// Shooting a missing URL on purpose (to review the 404 page) is not an error.
-const expect404 = /404|not-?found|nothing|missing/i.test(new URL(url).pathname);
+const vitals = (page) => page.evaluate(() => ({ ...window.__vitals, cls: Math.round(window.__vitals.cls * 1000) / 1000 }));
+
 // A loader is any #loader element; it is done when removed or hidden.
 const loaderGone = () => { const l = document.getElementById('loader'); if (!l || l.hidden) return true; const cs = getComputedStyle(l); return cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0; };
-const watch = (page, tag) => {
-  page.on('console', (m) => {
-    if (m.type() !== 'error') return;
-    if (expect404 && /status of 404/.test(m.text())) return;
-    report.errors.push(`[${tag}] ${m.text()}`);
-  });
-  page.on('pageerror', (e) => report.errors.push(`[${tag}] pageerror: ${e.message}`));
-  page.on('requestfailed', (r) => report.failed.push(`[${tag}] ${r.url()} ${r.failure()?.errorText}`));
-  page.on('response', (r) => {
-    if (r.status() < 400) return;
-    if (expect404 && r.status() === 404 && r.request().resourceType() === 'document') return;
-    report.failed.push(`[${tag}] ${r.status()} ${r.url()}`);
-  });
-};
 // Wheel-scroll like a person so smooth-scroll libraries see real input.
 const wheelTo = async (page, y) => {
   for (let i = 0; i < 80; i++) {
@@ -78,103 +107,264 @@ const metrics = (page) => page.evaluate(() => {
   }).filter(Boolean).slice(0, 6) : [];
   return { height: de.scrollHeight, overflowX, offenders, h1, smallTargets: small, glHidden, title: document.title, glOn: de.classList.contains('gl-on') };
 });
-const fps = (page, ms = 2000) => page.evaluate((ms) => new Promise((res) => {
+// Frame rate over `ms`. With `scrollPx`, the page also scrolls that far each frame (touch-like).
+const fps = (page, ms = 2000, scrollPx = 0) => page.evaluate(([ms, scrollPx]) => new Promise((res) => {
   let n = 0; const t0 = performance.now(); let worst = 0; let last = t0;
-  const f = (t) => { n++; worst = Math.max(worst, t - last); last = t; if (t - t0 < ms) requestAnimationFrame(f); else res({ fps: Math.round((n * 1000) / (t - t0)), worstFrameMs: Math.round(worst) }); };
+  const f = (t) => { n++; worst = Math.max(worst, t - last); last = t; if (scrollPx) scrollBy(0, scrollPx); if (t - t0 < ms) requestAnimationFrame(f); else res({ fps: Math.round((n * 1000) / (t - t0)), worstFrameMs: Math.round(worst) }); };
   requestAnimationFrame(f);
-}), ms);
+}), [ms, scrollPx]);
 
-// Desktop
-{
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const page = await ctx.newPage();
-  watch(page, 'desktop');
-  const t0 = Date.now();
-  await page.goto(url, { waitUntil: 'load' });
-  await page.waitForTimeout(400);
-  await shot(page, 'd-00-firstpaint');
-  await page.waitForFunction(loaderGone, null, { timeout: 8000 }).catch(() => report.errors.push('[desktop] loader still present after 8s'));
-  report.desktop.loaderMs = Date.now() - t0;
-  await page.waitForTimeout(1600);
-  await shot(page, 'd-01-hero');
-  await page.mouse.move(720, 450);
-  const m = await metrics(page);
-  report.desktop = { ...report.desktop, ...m };
-  const max = m.height - 900;
-  for (let i = 1; i <= steps; i++) {
-    await wheelTo(page, Math.round((max * i) / steps));
-    await shot(page, `d-${String(i + 1).padStart(2, '0')}-scroll`);
+// axe-core, WCAG 2.1 A/AA. Contrast failures carry the measured colors and ratio;
+// "needsReview" counts text axe could not judge (usually text over images or canvas).
+async function a11y(page, axeSource) {
+  if (!axeSource) return { skipped: 'axe-core not found: run npm i -D axe-core in the project' };
+  await page.evaluate(axeSource);
+  return page.evaluate(async () => {
+    const r = await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] }, resultTypes: ['violations', 'incomplete'] });
+    const violations = r.violations.map((v) => ({
+      id: v.id, impact: v.impact, help: v.help, count: v.nodes.length,
+      nodes: v.nodes.slice(0, 4).map((n) => {
+        const d = n.any.find((c) => c.data && c.data.contrastRatio)?.data;
+        return d ? `${n.target.join(' ')} (${d.fgColor} on ${d.bgColor}, ${d.contrastRatio}:1, needs ${d.expectedContrastRatio})` : n.target.join(' ');
+      }),
+    }));
+    const needsReview = r.incomplete.find((v) => v.id === 'color-contrast')?.nodes.length || 0;
+    return { violations, serious: violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').length, contrastNeedsReview: needsReview };
+  });
+}
+
+// Tab through the page like a keyboard user. Flags focus stops with no visible change in style
+// (heuristic: compares the element, its pseudo-elements and first children focused vs blurred)
+// and focus landing on elements that are invisible or off screen.
+async function keyboard(page, shot) {
+  const stops = [];
+  const noVisibleFocus = [];
+  const invisibleFocus = [];
+  let repeats = 0;
+  for (let i = 1; i <= tabs; i++) {
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(250);
+    const stop = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      const style = (e, pseudo) => { const cs = getComputedStyle(e, pseudo); return [cs.outlineStyle, cs.outlineWidth, cs.outlineColor, cs.boxShadow, cs.backgroundColor, cs.color, cs.textDecorationLine, cs.borderColor, cs.opacity, cs.transform, cs.content].join('|'); };
+      window.__snap = () => [style(el), style(el, '::before'), style(el, '::after'), ...[...el.children].slice(0, 3).map((c) => style(c))].join('#');
+      window.__focused = el;
+      let alpha = 1;
+      for (let n = el; n; n = n.parentElement) alpha *= parseFloat(getComputedStyle(n).opacity);
+      const r = el.getBoundingClientRect();
+      return {
+        tag: el.tagName.toLowerCase(),
+        label: (el.innerText || el.getAttribute('aria-label') || el.getAttribute('title') || el.getAttribute('href') || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 40),
+        href: el.getAttribute('href'),
+        visible: alpha > 0.1 && r.width > 1 && r.height > 1 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth,
+        focused: window.__snap(),
+      };
+    });
+    if (!stop) { stops.push('(body: focus left the page)'); break; }
+    if (i <= 4) await shot(page, `k-${String(i).padStart(2, '0')}-focus`);
+    const blurred = await page.evaluate(async () => { window.__focused.blur(); await new Promise((r) => setTimeout(r, 300)); const s = window.__snap(); window.__focused.focus({ preventScroll: true }); return s; });
+    const name = `${stop.tag} "${stop.label}"`;
+    if (stops.length && stops[stops.length - 1] === name) repeats++;
+    stops.push(name);
+    if (!stop.visible) invisibleFocus.push(name);
+    else if (blurred === stop.focused) noVisibleFocus.push(name);
+    if (repeats >= 2) break;
   }
-  // FPS while scrolling back up through the page
-  const fpsP = fps(page, 2500);
-  for (let i = 0; i < 12; i++) { await page.mouse.wheel(0, -500); await page.waitForTimeout(120); }
-  report.desktop.scrollFps = await fpsP;
-  if (nav) {
-    await wheelTo(page, 0);
-    const href = await page.evaluate(() => [...document.querySelectorAll('a[href^="/"]')].map((a) => a.getAttribute('href'))
-      .find((h) => h && h !== '/' && !h.startsWith('/#') && new URL(h, location.href).pathname !== location.pathname));
-    if (href) {
-      const link = page.locator(`a[href="${href}"]`).first();
-      await link.scrollIntoViewIfNeeded();
-      await page.waitForTimeout(800);
-      await link.click();
-      await page.waitForTimeout(300);
-      await shot(page, 'd-90-transition-a');
-      await page.waitForTimeout(400);
-      await shot(page, 'd-90-transition-b');
-      await page.waitForTimeout(500);
-      await shot(page, 'd-90-transition-c');
-      await page.waitForURL((u) => u.pathname.startsWith(href.replace(/\/$/, '')), { timeout: 8000 }).catch(() => report.errors.push(`[nav] did not reach ${href}`));
-      await page.waitForTimeout(2200);
-      await shot(page, 'd-91-after-nav');
-      report.desktop.nav = { href, scrollYAfter: await page.evaluate(() => scrollY), title: await page.title() };
-      await page.goBack();
-      await page.waitForTimeout(2500);
-      await shot(page, 'd-92-back');
+  const first = stops[0] || '';
+  return {
+    stops,
+    skipLinkFirst: /skip|#main|#content/i.test(first),
+    noVisibleFocus,
+    invisibleFocus,
+    stuck: repeats >= 2,
+  };
+}
+
+async function shootPage(browser, axeSource, url, out) {
+  fs.mkdirSync(out, { recursive: true });
+  for (const f of fs.readdirSync(out)) if (f.endsWith('.png')) fs.rmSync(path.join(out, f));
+  const report = { url, errors: [], failed: [], desktop: {}, mobile: {}, files: [], notes: [] };
+  const shot = async (page, name) => {
+    const file = path.join(out, `${name}.png`);
+    await page.screenshot({ path: file });
+    report.files.push(file);
+  };
+  // Shooting a missing URL on purpose (to review the 404 page) is not an error.
+  const expect404 = /404|not-?found|nothing|missing/i.test(new URL(url).pathname);
+  const watch = (page, tag) => {
+    page.on('console', (m) => {
+      if (m.type() !== 'error') return;
+      if (expect404 && /status of 404/.test(m.text())) return;
+      report.errors.push(`[${tag}] ${m.text()}`);
+    });
+    page.on('pageerror', (e) => report.errors.push(`[${tag}] pageerror: ${e.message}`));
+    page.on('requestfailed', (r) => report.failed.push(`[${tag}] ${r.url()} ${r.failure()?.errorText}`));
+    page.on('response', (r) => {
+      if (r.status() < 400) return;
+      if (expect404 && r.status() === 404 && r.request().resourceType() === 'document') return;
+      report.failed.push(`[${tag}] ${r.status()} ${r.url()}`);
+    });
+  };
+
+  // Desktop
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await ctx.addInitScript(vitalsInit);
+    const page = await ctx.newPage();
+    watch(page, 'desktop');
+    const t0 = Date.now();
+    await page.goto(url, { waitUntil: 'load' });
+    await page.waitForTimeout(400);
+    await shot(page, 'd-00-firstpaint');
+    await page.waitForFunction(loaderGone, null, { timeout: 8000 }).catch(() => report.errors.push('[desktop] loader still present after 8s'));
+    report.desktop.loaderMs = Date.now() - t0;
+    await page.waitForTimeout(1600);
+    await shot(page, 'd-01-hero');
+    report.desktop.vitals = await vitals(page);
+    await page.mouse.move(720, 450);
+    const m = await metrics(page);
+    report.desktop = { ...report.desktop, ...m };
+    const max = m.height - 900;
+    for (let i = 1; i <= steps; i++) {
+      await wheelTo(page, Math.round((max * i) / steps));
+      await shot(page, `d-${String(i + 1).padStart(2, '0')}-scroll`);
     }
+    // FPS while scrolling back up through the page
+    const fpsP = fps(page, 2500);
+    for (let i = 0; i < 12; i++) { await page.mouse.wheel(0, -500); await page.waitForTimeout(120); }
+    report.desktop.scrollFps = await fpsP;
+    if (nav) {
+      await wheelTo(page, 0);
+      const href = await page.evaluate(() => [...document.querySelectorAll('a[href^="/"]')].map((a) => a.getAttribute('href'))
+        .find((h) => h && h !== '/' && !h.startsWith('/#') && new URL(h, location.href).pathname !== location.pathname));
+      if (href) {
+        const link = page.locator(`a[href="${href}"]`).first();
+        await link.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(800);
+        await link.click();
+        await page.waitForTimeout(300);
+        await shot(page, 'd-90-transition-a');
+        await page.waitForTimeout(400);
+        await shot(page, 'd-90-transition-b');
+        await page.waitForTimeout(500);
+        await shot(page, 'd-90-transition-c');
+        await page.waitForURL((u) => u.pathname.startsWith(href.replace(/\/$/, '')), { timeout: 8000 }).catch(() => report.errors.push(`[nav] did not reach ${href}`));
+        await page.waitForTimeout(2200);
+        await shot(page, 'd-91-after-nav');
+        report.desktop.nav = { href, scrollYAfter: await page.evaluate(() => scrollY), title: await page.title() };
+        await page.goBack();
+        await page.waitForTimeout(2500);
+        await shot(page, 'd-92-back');
+      }
+    }
+    await ctx.close();
   }
-  await ctx.close();
-}
 
-// Mobile
-{
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-  const page = await ctx.newPage();
-  watch(page, 'mobile');
-  await page.goto(url, { waitUntil: 'load' });
-  await page.waitForFunction(loaderGone, null, { timeout: 8000 }).catch(() => {});
-  await page.waitForTimeout(1800);
-  await shot(page, 'm-01-hero');
-  report.mobile = await metrics(page);
-  const max = report.mobile.height - 844;
-  for (let i = 1; i <= Math.min(steps, 5); i++) {
-    await page.evaluate((y) => scrollTo(0, y), Math.round((max * i) / Math.min(steps, 5)));
+  // Keyboard: a fresh load, then Tab from the top of the page.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    watch(page, 'keyboard');
+    await page.goto(url, { waitUntil: 'load' });
+    await page.waitForFunction(loaderGone, null, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(1600);
+    report.keyboard = await keyboard(page, shot);
+    await ctx.close();
+  }
+
+  // Mobile, on a mid-range phone: 4x CPU slowdown and slow 4G, like Lighthouse's mobile run.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await ctx.addInitScript(vitalsInit);
+    const page = await ctx.newPage();
+    watch(page, 'mobile');
+    if (throttle) {
+      const cdp = await ctx.newCDPSession(page);
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+      await cdp.send('Network.enable');
+      await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 });
+    }
+    const t0 = Date.now();
+    await page.goto(url, { waitUntil: 'load', timeout: 60000 });
+    await page.waitForFunction(loaderGone, null, { timeout: 20000 }).catch(() => report.errors.push('[mobile] loader still present after 20s'));
+    const loaderMs = Date.now() - t0;
+    await page.waitForTimeout(1800);
+    await shot(page, 'm-01-hero');
+    const v = await vitals(page);
+    report.mobile = { throttled: throttle, loaderMs, vitals: v, ...(await metrics(page)) };
+    report.mobile.scrollFps = await fps(page, 2500, 6);
+    await page.evaluate(() => scrollTo(0, 0));
+    const max = report.mobile.height - 844;
+    for (let i = 1; i <= Math.min(steps, 5); i++) {
+      await page.evaluate((y) => scrollTo(0, y), Math.round((max * i) / Math.min(steps, 5)));
+      await page.waitForTimeout(1500);
+      await shot(page, `m-${String(i + 1).padStart(2, '0')}-scroll`);
+    }
+    await ctx.close();
+  }
+
+  // Reduced motion: content must be fully visible with no animation. Also the axe pass, since
+  // every text is in its final state here.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    const page = await ctx.newPage();
+    watch(page, 'reduced');
+    await page.goto(url, { waitUntil: 'load' });
     await page.waitForTimeout(1500);
-    await shot(page, `m-${String(i + 1).padStart(2, '0')}-scroll`);
+    await shot(page, 'r-01-hero');
+    report.reduced = await page.evaluate(() => ({
+      hiddenText: [...document.querySelectorAll('h1,h2,h3,p,a')].filter((e) => {
+        const cs = getComputedStyle(e);
+        return e.getBoundingClientRect().height > 0 && (cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.05);
+      }).length,
+    }));
+    report.a11y = await a11y(page, axeSource).catch((e) => ({ skipped: `axe failed: ${e.message}` }));
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight / 2));
+    await page.waitForTimeout(600);
+    await shot(page, 'r-02-mid');
+    await ctx.close();
   }
-  await ctx.close();
+
+  report.notes.push('desktop FPS runs headless on a software GPU: treat it as a floor, not a measurement of real hardware');
+  if (throttle) report.notes.push('mobile runs at 4x CPU slowdown on slow 4G: mobile.vitals and mobile.scrollFps are the numbers that count');
+  fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
+  return report;
 }
 
-// Reduced motion: content must be fully visible with no animation.
-{
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
-  const page = await ctx.newPage();
-  watch(page, 'reduced');
-  await page.goto(url, { waitUntil: 'load' });
-  await page.waitForTimeout(1500);
-  await shot(page, 'r-01-hero');
-  report.reduced = await page.evaluate(() => ({
-    hiddenText: [...document.querySelectorAll('h1,h2,h3,p,a')].filter((e) => {
-      const cs = getComputedStyle(e);
-      return e.getBoundingClientRect().height > 0 && (cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.05);
-    }).length,
-  }));
-  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight / 2));
-  await page.waitForTimeout(600);
-  await shot(page, 'r-02-mid');
-  await ctx.close();
-}
+// The numbers to act on, one line per page.
+const brief = (name, r) => ({
+  page: name,
+  url: r.url,
+  errors: r.errors.length + r.failed.length,
+  overflow: !!(r.desktop.overflowX || r.mobile.overflowX),
+  smallTargets: r.mobile.smallTargets?.length || 0,
+  hiddenTextReduced: r.reduced?.hiddenText ?? null,
+  mobileLcpMs: r.mobile.vitals?.lcpMs ?? null,
+  mobileCls: r.mobile.vitals?.cls ?? null,
+  desktopFps: r.desktop.scrollFps?.fps ?? null,
+  mobileFps: r.mobile.scrollFps?.fps ?? null,
+  axeSerious: r.a11y?.serious ?? null,
+  axeViolations: r.a11y?.violations?.map((v) => `${v.id} x${v.count}`) ?? r.a11y?.skipped,
+  skipLinkFirst: r.keyboard?.skipLinkFirst ?? null,
+  noVisibleFocus: r.keyboard?.noVisibleFocus?.length ?? null,
+  invisibleFocus: r.keyboard?.invisibleFocus?.length ?? null,
+});
 
+const browser = await launch();
+const axeSource = await loadAxe();
+if (crawl) {
+  const targets = await pickPages(url, parseInt(opt('max', '8'), 10));
+  const summary = [];
+  for (const t of targets) {
+    console.error(`shooting ${t.name}: ${t.url}`);
+    summary.push(brief(t.name, await shootPage(browser, axeSource, t.url, path.join(outRoot, t.name))));
+  }
+  fs.writeFileSync(path.join(outRoot, 'summary.json'), JSON.stringify(summary, null, 2));
+  console.log(JSON.stringify(summary, null, 2));
+  console.log(`\n${targets.length} pages shot into ${outRoot}/<page>/ (report.json in each). Read every PNG.`);
+} else {
+  const report = await shootPage(browser, axeSource, url, outRoot);
+  console.log(JSON.stringify({ ...report, files: `${report.files.length} screenshots in ${outRoot}` }, null, 2));
+}
 await browser.close();
-fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
-console.log(JSON.stringify({ ...report, files: `${report.files.length} screenshots in ${out}` }, null, 2));

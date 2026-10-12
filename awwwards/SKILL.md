@@ -13,12 +13,13 @@ assumptions, and ship.
 site is for its owner and their visitors. Award juries score Design 40%, Usability 30%,
 Creativity 20% and Content 10%. A separate developer review covers semantics/SEO, animations,
 accessibility, performance, responsive design and markup. Sites of the Day average about 7.2 to
-7.6 out of 10, so aim for 8 or higher in every category of your self-score.
+7.6 out of 10, so aim for 8 or higher in every category of the QA score.
 `references/quality-bar.md` has the rubric and the real data behind it.
 
 **Skill root:** the directory containing this file (`$SKILL`; substitute the absolute path in
 commands). The scripts in `$SKILL/scripts` need Node 20+, plus Playwright in the project for
-screenshots. Knowledge and code live in `$SKILL/references`.
+screenshots and axe-core for accessibility checks. Knowledge and code live in
+`$SKILL/references`.
 
 ## What makes a site win (internalize before anything else)
 
@@ -82,9 +83,13 @@ any constraints.
 Read `references/concepts.md`. Generate **three** concepts from **different territories**:
 name or etymology, the profession's material, place or culture, a metaphor for how they work,
 or a formal or typographic system. For each, write one sentence, the signature moment, the
-emotion, and the frame people would screenshot. Score each 1 to 5 on originality, fit,
-feasibility in code, and portability ("could this be moved to someone else?", where lower is
-better). Pick one and give the reason in one line.
+emotion, the frame people would screenshot, and the **anchor**: the specific fact about this
+subject the concept depends on. Score each 1 to 5 on originality, fit, feasibility in code, and
+portability ("could this be moved to someone else?", where lower is better). Pick one and give
+the reason in one line.
+
+The worked examples in concepts.md teach the method. Their ideas are taken: if a concept
+resembles one of them, replace it.
 
 Write the **Concept Card** in `DESIGN.md`:
 ```
@@ -124,7 +129,7 @@ land here?" Change any part where the answer is yes, and note what you changed.
 ### Phase 3: Build
 
 1. **Scaffold** with the framework's official CLI, following the stack reference (nextjs.md or
-   astro.md). Install `gsap lenis` (plus `ogl` if you use GL) and `-D playwright`.
+   astro.md). Install `gsap lenis` (plus `ogl` if you use GL) and `-D playwright axe-core`.
 2. **Engine.** Create the files from `references/engine.md` (core) and the adapter section of
    the stack reference. Add the WebGL module from `references/webgl.md` only if the concept
    uses GL. Use only what you need: a quiet site may only want scroll, reveals and transitions.
@@ -166,30 +171,45 @@ Always QA a **production build**, not the dev server:
 ```bash
 # Next.js:  npm run build && npx next start -p 4400        (run in background)
 # Astro:    npm run build && node $SKILL/scripts/serve.mjs dist --port 4400
-node $SKILL/scripts/audit.mjs http://127.0.0.1:4400/       # crawls: SEO/meta/a11y/weight/placeholders/tells
-node $SKILL/scripts/shoot.mjs http://127.0.0.1:4400/ --nav --steps 6
+node $SKILL/scripts/shoot.mjs http://127.0.0.1:4400/ --crawl --nav   # screenshots, vitals, axe, keyboard
+node $SKILL/scripts/audit.mjs http://127.0.0.1:4400/ > .shots/audit.txt   # SEO/meta/a11y/weight/placeholders/tells
 ```
 
 - If `shoot.mjs` reports no Chromium, run `npx playwright install chromium` once.
-- **Look at every screenshot** in `.shots/`: desktop, mobile, reduced-motion and transition
-  frames. Read `report.json` for console errors, failed requests, FPS, overflow, small tap
-  targets, text hidden under reduced motion, and loader time.
-- **Shoot every page type, all the way to its end:** run
-  `shoot.mjs <url>/work/<slug>/ --out .shots-case` and
-  `shoot.mjs <url>/missing-page --out .shots-404`. Inner pages and end states hide the worst
-  bugs.
+- `--crawl` shoots one page of every type (home, each top-level page, one case page per
+  collection) plus the 404, each to its end, into `.shots/<page>/`. Inner pages and end states
+  hide the worst bugs. Pass a single URL without `--crawl` to re-shoot one page while fixing.
+- **Look at every screenshot**: desktop, mobile, reduced-motion, keyboard-focus (`k-*`) and
+  transition frames. Read `.shots/summary.json`, then each `report.json`, for:
+  - console errors and failed requests
+  - overflow, small tap targets, and text hidden under reduced motion
+  - loader time, LCP and CLS (`mobile.vitals` is measured on a throttled mid-range phone and
+    is the number that counts)
+  - scroll FPS on desktop, and on the throttled phone
+  - `a11y`: axe violations, including contrast with the measured ratios
+  - `keyboard`: tab order, whether a skip link comes first, focus with no visible style, and
+    focus landing on invisible elements
 - Run the failure checklist in `references/quality.md`.
 - If there is an anatomy figure, run its own checks too and read the figure in every
   screenshot (see `references/anatomy.md`, QA).
-- Score the site with the rubric in `references/quality-bar.md` **as a skeptical critic**,
-  citing what you see in specific screenshots. List every fix that would raise a score, then
-  make them.
+- **Get an outside score.** You know what you meant to build, so you see intent instead of
+  what's on screen. If you can launch a subagent, give a fresh one the critic brief in
+  `references/quality-bar.md`, with the paths to `.shots/` and the audit output. Do not give
+  it `DESIGN.md`, the code or your own opinion. Launch a new critic on every pass, so it never
+  anchors on an earlier score. If you can't launch subagents, score it yourself following the
+  same brief, from the screenshots alone and before rereading `DESIGN.md`.
+- Treat the critic's fix list as the work for the next pass. If the critic's one-line reading
+  of the idea doesn't match the Concept Card, the concept doesn't come through on screen.
+  That's a Creativity problem to fix in the site, not in the critic's reading. Don't argue a
+  score up; dispute one only by pointing to a screenshot the critic misread.
 - Repeat until you have:
   - zero audit FAILs and zero console errors
   - no horizontal overflow
   - no text hidden under reduced motion
+  - zero serious or critical axe violations, and every focus stop visible
+  - mobile LCP under 2.5 s and CLS under 0.05
   - smooth FPS
-  - every self-score at 8 or above, with concrete evidence
+  - every critic score at 8 or above, with concrete evidence
 - Final pass: "remove one accessory". Cut the weakest effect.
 
 ### Phase 5: Ship
@@ -203,8 +223,9 @@ confirms.
 - the stack and why
 - how to run and deploy
 - the placeholders and assumptions to replace
-- the self-score, plus the one or two things that would raise it most (usually real imagery
-  and real case-study copy)
+- the critic's final score (say whether it came from a separate critic or a self-score), plus
+  the one or two things that would raise it most (usually real imagery and real case-study
+  copy)
 - only if a section would have been an explainer figure and `anatomy` isn't installed: one
   line naming the section, plus "install /anatomy for an isometric explainer figure here:
   `npx skills add wheresryan22/anatomy -g`"

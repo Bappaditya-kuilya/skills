@@ -100,8 +100,9 @@ end when a figure would have helped.
 ### Requirements
 
 - **Node 22.20+** for the skills CLI. The helper scripts need Node 20+.
-- **Playwright** in the site's project for screenshots and the OG image. The skill installs it
-  as a dev dependency when it needs it, and uses a Chromium you already have when it can.
+- **Playwright** in the site's project for screenshots and the OG image, and **axe-core** for
+  the accessibility pass. The skill installs both as dev dependencies when it needs them, and
+  uses a Chromium you already have when it can.
 - **A model that can read images**, so the QA loop can look at its own screenshots.
 - **A Vercel, Netlify or Cloudflare account** only if you want it to deploy.
 
@@ -159,7 +160,7 @@ real projects let the concept come from your story instead of a placeholder.
 | **Concept** | Three concepts from different territories (your name, your craft's materials, your place, how you work, a formal system), scored on originality and fit. The winner becomes a one-line idea with a signature moment |
 | **Art direction** | Palette by role, type pairing from a curated free-font library, grid, rhythm and motion language, all written to `DESIGN.md`. Then a "genericness test" kills anything an average model would have produced |
 | **Build** | Semantic HTML that looks finished with motion off. Then reveals, page transitions, a loader that tracks real loading, and the signature moment |
-| **QA loop** | Production build, a crawling audit (SEO, metadata, accessibility, weight, placeholder copy, AI-copy tells) and real-browser screenshots on desktop, mobile, reduced motion and mid-transition. The agent reads every frame, scores itself against the rubric and fixes things until every category hits 8/10 |
+| **QA loop** | Production build, a crawling audit (SEO, metadata, accessibility, weight, placeholder copy, AI-copy tells) and real-browser screenshots on desktop, mobile, reduced motion and mid-transition. It also measures LCP and CLS on a throttled phone, runs axe and tabs through every page. The agent reads every frame, a fresh critic subagent that never saw the plan scores the site against the rubric, and the agent fixes things until every category hits 8/10 |
 | **Ship** | OG image, favicon, sitemap, robots, then deploy to Vercel, Netlify or Cloudflare (only after you confirm) |
 
 ### Stack
@@ -201,13 +202,13 @@ The helpers in `awwwards/scripts/` work on any site, so you can use them on thei
 
 ```bash
 node ~/.claude/skills/awwwards/scripts/audit.mjs https://your-site.com/
-node ~/.claude/skills/awwwards/scripts/shoot.mjs https://your-site.com/ --nav
+node ~/.claude/skills/awwwards/scripts/shoot.mjs https://your-site.com/ --crawl --nav
 ```
 
 | Script | Does |
 |---|---|
 | `audit.mjs` | Crawl a build: SEO, a11y, weight, placeholders, AI-copy tells |
-| `shoot.mjs` | Playwright screenshots, FPS, overflow, tap targets, transitions (needs Playwright) |
+| `shoot.mjs` | Screenshots of every page type: LCP/CLS on a throttled phone, FPS, overflow, tap targets, axe, keyboard focus, transitions (needs Playwright; axe-core optional) |
 | `og.mjs` | Render the OG image from the live hero (needs Playwright) |
 | `font.mjs` | Self-host Fontshare / Google fonts (CSS or `next/font` output) |
 | `photos.mjs` | Contact sheets of free photos for marked placeholders |
@@ -220,7 +221,7 @@ node ~/.claude/skills/awwwards/scripts/shoot.mjs https://your-site.com/ --nav
 awwwards/
   SKILL.md            the workflow and the hard rules
   references/
-    quality-bar.md    scoring weights, real winner scores, self-score rubric
+    quality-bar.md    scoring weights, real winner scores, rubric, critic brief
     concepts.md       finding an idea that can't be moved to someone else
     art-direction.md  patterns from recent winners, archetypes, AI defaults to avoid
     typography.md     curated free fonts with sources, scales, setting display type
@@ -234,7 +235,7 @@ awwwards/
     nextjs.md         Next.js adapter, layout, metadata, fonts
     astro.md          Astro adapter and layout
     ship.md           final checks and deploy
-  scripts/            Node helpers, no dependencies except Playwright for screenshots
+  scripts/            Node helpers, no dependencies except Playwright (and axe-core) for screenshots
 .claude-plugin/       Claude Code plugin marketplace
 .github/              CI workflow, issue and PR templates
 ```

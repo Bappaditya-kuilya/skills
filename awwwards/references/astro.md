@@ -10,7 +10,7 @@ built and run under Astro 7.
 
 ```bash
 npm create astro@latest <dir> -- --template minimal --add sitemap --install --no-git --skip-houston --yes
-cd <dir> && npm i gsap lenis ogl && npm i -D playwright @astrojs/check typescript
+cd <dir> && npm i gsap lenis ogl && npm i -D playwright axe-core @astrojs/check typescript
 ```
 
 ```

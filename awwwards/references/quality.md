@@ -78,8 +78,11 @@ field.
 
 ## QA checklist (tick with evidence)
 - [ ] audit.mjs: 0 FAIL; WARNs reviewed and fixed or justified
-- [ ] shoot.mjs report: 0 console errors, 0 failed requests, no overflow (desktop + mobile), reduced `hiddenText` = 0, FPS ≥ 55
+- [ ] shoot.mjs `--crawl` on every page: 0 console errors, 0 failed requests, no overflow (desktop + mobile), reduced `hiddenText` = 0, FPS ≥ 55
+- [ ] Throttled mobile: `mobile.vitals.lcpMs` < 2500, `cls` < 0.05, `mobile.loaderMs` reviewed (a loader that is fine on desktop can run 4 s on a phone)
+- [ ] `a11y`: 0 serious or critical axe violations; every `contrastNeedsReview` node checked by eye in the screenshots (text over images and canvas)
+- [ ] `keyboard`: skip link first, `noVisibleFocus` and `invisibleFocus` empty, not `stuck`; `k-*` frames show a ring in the system's style
 - [ ] Every screenshot read; hero frame works as a poster; mobile frames composed
-- [ ] Inner pages and 404 shot and reviewed; navigation transition frames reviewed
-- [ ] Keyboard pass: Tab through home and a case page; focus visible; menu operable
+- [ ] Navigation transition frames reviewed; menu opens, traps focus and closes on Escape (try it by hand)
+- [ ] Critic subagent's scores all ≥ 8, and its one-line reading of the idea matches the Concept Card
 - [ ] Copy pass: no dashes, no banned words, no placeholder left unmarked

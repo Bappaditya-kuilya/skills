@@ -31,14 +31,25 @@ Test: can you derive at least four design decisions from the sentence? If not, i
 1. Write 3 concepts, each from a different territory, each one sentence.
 2. For each, list: layout rule, motion verb, type voice, palette source, signature moment,
    the frame people would screenshot.
-3. Score 1 to 5: originality, fit to the person/brand, feasibility in ~1 day of code,
+3. For each, write the **anchor**: the specific fact about this subject the concept depends on
+   (a name's meaning, a real material, a real place, how they actually work). Then run the swap
+   test: put a different subject in the sentence. If it still works, the concept is a style;
+   portability is 4 or 5.
+4. Score 1 to 5: originality, fit to the person/brand, feasibility in ~1 day of code,
    portability (could it be moved to someone else? lower is better).
-4. Pick the best total. Optionally steal one secondary idea from a runner-up for a detail
+5. Pick the best total. Optionally steal one secondary idea from a runner-up for a detail
    (404 page, loader, footer), never for the main structure.
-5. Kill the concept if its only expression is a hero effect. A concept must survive to the
+6. Kill the concept if its only expression is a hero effect. A concept must survive to the
    footer, the case page and the 404.
 
-## Worked example: "make me a portfolio, my name is Marco"
+## Worked examples (the method, not ideas to reuse)
+
+These examples show how to reason. **Never reuse their ideas**, even adapted to a new subject:
+no code that compiles into an image, no homepage made of one sentence, no viewport frame, no
+running balance, no fire that cools down, no mise en place. If one of your concepts resembles
+an idea below, it is borrowed. Replace it with one built on your own subject's anchor.
+
+### "make me a portfolio, my name is Marco"
 
 | | A. The frame (name) | B. Source & render (material) | C. One sentence (formal) |
 |---|---|---|---|
@@ -53,6 +64,28 @@ Test: can you derive at least four design decisions from the sentence? If not, i
 Pick A: strongest fit to the name, a complete rule system (frame → layout, transitions, captions,
 cursor), feasible with clip-path + the engine. Steal from C for the 404: a frame with nothing in it,
 labeled like an empty museum wall.
+
+### "a launch page for Ledger, a budgeting app"
+
+| | Idea | Anchor | Signature | O/F/Fe/P |
+|---|---|---|---|---|
+| A. Formal | The page is one running balance: every section is an entry, and a corner total updates as you scroll | the product's core object is a balance | entries post into the column and the total ticks over | 4 / 5 / 5 / 2 |
+| B. Material | Double-entry: each problem on the left is answered on the right, and a section closes when both sides balance | double-entry bookkeeping | the ruled line draws itself when a section balances | 4 / 4 / 4 / 2 |
+| C. Process | Month-end close: scrolling crosses a month as receipts pile up and file themselves | how people actually budget | receipts fly into folders on scroll | 3 / 4 / 3 / 3 |
+
+Pick A: it fits the product best and is the cheapest to build well. The 404 is an entry that
+doesn't reconcile.
+
+### "a site for Brasa, a wood-fire restaurant in Lisbon"
+
+| | Idea | Anchor | Signature | O/F/Fe/P |
+|---|---|---|---|---|
+| A. Name | *Brasa* means ember: the page is a fire across one evening, hot at the top and ash grey at closing time | the name and the kitchen | ground and ink cool through one global variable as you scroll | 4 / 5 / 4 / 2 |
+| B. Place | The menu is set like *calçada*, Lisbon's black-and-white stone pavement: every dish is a stone in the pattern | the city's streets | the pattern assembles stone by stone as the menu reveals | 4 / 3 / 3 / 2 |
+| C. Process | Mise en place: each section brings one ingredient from the station to the fire | how a kitchen works | ingredients slide onto the grill in order | 3 / 4 / 4 / 4 |
+
+Pick A, and scale the theatre down: no loader, no GL, just the color of the evening. Steal from
+B for the footer: the address set into a strip of pavement.
 
 ## Signature moment catalog (pick one; recipes in motion.md / webgl.md)
 

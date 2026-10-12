@@ -1,4 +1,4 @@
-# The quality bar: how award sites are scored, and the self-score rubric
+# The quality bar: how award sites are scored, the rubric, and the critic brief
 
 This skill uses the Awwwards scoring system as its bar. It is public, detailed, and backed by
 years of real scores. The goal is a site that would hold up in front of that jury. Submitting
@@ -45,14 +45,15 @@ ahead of the field. Only 3 of 11 top studio sites we probed shipped any
 ## Critic's self-test (do this on your screenshots)
 
 1. Screenshot the hero. Is the static frame strong on its own?
-2. Throttle (4x CPU, fast 3G). Does it still paint quickly and hold its frame rate?
+2. Throttle (4x CPU, slow 4G). Does it still paint quickly and hold its frame rate? `shoot.mjs`
+   runs its mobile pass this way: read `mobile.vitals` and `mobile.scrollFps`.
 3. Watch the transitions between states, not just between pages.
 4. Toggle reduced motion. Is the site complete and calm?
 5. Open it at phone width. Is it designed, or squished?
 
-## Self-score rubric (score 1 to 10 with evidence from specific screenshots)
+## Score rubric (1 to 10, with evidence from specific screenshots)
 
-Be the skeptical critic. Every score needs evidence, for example: "d-01-hero: display type 18vw,
+Score as a skeptical critic. Every score needs evidence, for example: "d-01-hero: display type 18vw,
 tracking -0.05em, optically aligned to the grid; the static frame works as a poster." No
 evidence, no points.
 
@@ -83,5 +84,46 @@ evidence, no points.
 Responsive, Markup/Meta-data. Use the `audit.mjs` and `shoot.mjs` reports as evidence.
 
 Weighted overall = 0.4 Design + 0.3 Usability + 0.2 Creativity + 0.1 Content. Target 8.0 or
-higher. Real reviewers score lower than self-assessments, so a self-score of 8 is roughly a
-competitive Site of the Day.
+higher. Real reviewers score lower than any assessment from inside the build, so an 8 here is
+roughly a competitive Site of the Day.
+
+## Critic brief (for a fresh subagent on every QA pass)
+
+The builder knows what it meant to build, so it scores intent instead of what's on screen. A
+critic that sees only the evidence scores like a jury. Pass this brief to a fresh subagent,
+filling in the three paths. Give it nothing else: no `DESIGN.md`, no code, no concept card, no
+earlier scores, no notes on what you were going for.
+
+```
+You are an Awwwards juror reviewing a site you have never seen. You get only evidence.
+
+Rubric:      <absolute path to references/quality-bar.md>, the "Score rubric" section
+Screenshots: <absolute path to .shots/>. Each page has its own folder with a report.json;
+             summary.json gives an overview. Prefixes: d- desktop 1440, m- phone 390,
+             r- reduced motion, k- keyboard focus, d-90..92 page transition and back.
+Audit:       <absolute path to the saved audit.mjs output>
+
+1. Open every screenshot. Before scoring, write in one sentence what you think the site's
+   idea is. If you can't tell, say so: that is a Creativity finding, not a guess to make.
+2. Score Design, Usability, Creativity and Content from 1 to 10, and each developer area
+   (Semantics/SEO, Animations/Transitions, Accessibility, WPO, Responsive, Markup/Meta-data).
+   Cite a screenshot file or a report field for every score. No evidence, no points. Start
+   from 6 and make the evidence earn every point above it.
+3. Weighted overall = 0.4 Design + 0.3 Usability + 0.2 Creativity + 0.1 Content.
+4. List the fixes that would raise a score, most score gained first. Each one names the
+   screenshot or field, what is wrong, and what to change. Be concrete ("m-03: the case-study
+   title wraps to five lines at 390 px; drop the mobile display size to 14vw"), never generic
+   ("improve the typography").
+5. Things you can't judge from stills (how motion feels, sound) you leave out of the score.
+   Don't assume they are good.
+
+Reply with: the one-sentence idea, a score table with evidence, the weighted overall, and the
+ranked fix list. Do not suggest a new concept; judge the one on screen.
+```
+
+The builder compares the critic's one-sentence idea with the Concept Card. If they don't
+match, the site isn't saying what it means to say: fix the site, not the critic.
+
+**Without subagents**, score it yourself under the same rules. Look at the screenshots before
+rereading `DESIGN.md`, start every category at 6, and give no points without a cited file.
+Say in the final message that the score is a self-score.

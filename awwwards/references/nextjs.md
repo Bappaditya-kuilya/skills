@@ -9,7 +9,7 @@ from what you remember.
 
 ```bash
 npx create-next-app@latest <dir> --ts --app --src-dir --eslint --no-tailwind --import-alias "@/*" --use-npm --yes
-cd <dir> && npm i gsap lenis ogl && npm i -D playwright
+cd <dir> && npm i gsap lenis ogl && npm i -D playwright axe-core
 ```
 Delete the starter page styles and assets. Tailwind is fine if the user or project uses it;
 tokens then become `@theme` variables with the same names.
