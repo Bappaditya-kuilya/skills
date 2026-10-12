@@ -39,6 +39,9 @@ ahead of the field. Only 3 of 11 top studio sites we probed shipped any
 - A WebGL hero at 18 to 20 fps on a mid-range phone, a 9 MB page, a 6-second progress bar.
 - Desktop-only thinking: a broken or squished mobile layout caps a site at Honorable Mention.
 - A custom cursor that hides the native one, missing focus states, low contrast.
+- A dead site: primary hovers that only swap a color, a concept that freezes the moment the
+  visitor stops. Reviewers call it
+  "static" or "a template" even when the frames are well composed.
 - Lorem ipsum, stock imagery, machine-translated copy.
 - Borrowed concepts: this season's horizontal gallery, the same distortion everyone ships.
 
@@ -50,6 +53,8 @@ ahead of the field. Only 3 of 11 top studio sites we probed shipped any
 3. Watch the transitions between states, not just between pages.
 4. Toggle reduced motion. Is the site complete and calm?
 5. Open it at phone width. Is it designed, or squished?
+6. Point at things. Do the links, buttons and images answer in one voice? Leave the mouse
+   still for five seconds. Does the concept still breathe?
 
 ## Score rubric (1 to 10, with evidence from specific screenshots)
 
@@ -66,7 +71,7 @@ evidence, no points.
 **Usability (30%)**
 - 6: works, but the loader is long, nav is unclear on some page, mobile is squished, or FPS drops.
 - 7: fast, clear nav, mobile works, reduced motion is acceptable.
-- 8: instant orientation, mobile composed for the hand, transitions never block, accessibility basics complete, 60 fps.
+- 8: instant orientation, mobile composed for the hand, transitions never block, accessibility basics complete, 60 fps, every primary hover target answers in the motion verb (`h-*` pairs; `hover.noHoverChange` empty).
 - 9: all of 8, plus delightful feedback everywhere and zero friction on every device.
 
 **Creativity (20%)**
@@ -101,6 +106,9 @@ Rubric:      <absolute path to references/quality-bar.md>, the "Score rubric" se
 Screenshots: <absolute path to .shots/>. Each page has its own folder with a report.json;
              summary.json gives an overview. Prefixes: d- desktop 1440, m- phone 390,
              r- reduced motion, k- keyboard focus, d-90..92 page transition and back.
+             h-NN-rest / h-NN-hover: one pointer target, clipped at the same
+             coordinates, at rest and under the pointer (report.json hover.targets
+             names each target, says whether it is primary and lists what changed).
 Audit:       <absolute path to the saved audit.mjs output>
 
 1. Open every screenshot. Before scoring, write in one sentence what you think the site's
@@ -114,8 +122,14 @@ Audit:       <absolute path to the saved audit.mjs output>
    screenshot or field, what is wrong, and what to change. Be concrete ("m-03: the case-study
    title wraps to five lines at 390 px; drop the mobile display size to 14vw"), never generic
    ("improve the typography").
-5. Things you can't judge from stills (how motion feels, sound) you leave out of the score.
-   Don't assume they are good.
+5. Judge interaction from the h- pairs and report.json `hover`. Primary targets in
+   `noHoverChange` cost Design and Animations/Transitions points. `colorOnly`, `pixels` and
+   `masked` are leads, not verdicts: open each pair. A fill that floods or inverts the whole button is
+   a real treatment; a CTA, nav or project link whose text only changes color is not, and
+   costs the same points.
+   `desktop.idleMotion: false` is not a fault by itself: judge whether a concept this big
+   should keep moving at rest. Things you can't judge from stills (how motion feels,
+   sound) you leave out of the score. Don't assume they are good.
 
 Reply with: the one-sentence idea, a score table with evidence, the weighted overall, and the
 ranked fix list. Do not suggest a new concept; judge the one on screen.

@@ -208,7 +208,7 @@ node ~/.claude/skills/awwwards/scripts/shoot.mjs https://your-site.com/ --crawl 
 | Script | Does |
 |---|---|
 | `audit.mjs` | Crawl a build: SEO, a11y, weight, placeholders, AI-copy tells |
-| `shoot.mjs` | Screenshots of every page type: LCP/CLS on a throttled phone, FPS, overflow, tap targets, axe, keyboard focus, transitions (needs Playwright; axe-core optional) |
+| `shoot.mjs` | Screenshots of every page type: LCP/CLS on a throttled phone, FPS, overflow, tap targets, axe, keyboard focus, rest/hover pairs per pointer target, idle motion, transitions (needs Playwright; axe-core optional) |
 | `og.mjs` | Render the OG image from the live hero (needs Playwright) |
 | `font.mjs` | Self-host Fontshare / Google fonts (CSS or `next/font` output) |
 | `photos.mjs` | Contact sheets of free photos for marked placeholders |

@@ -28,7 +28,9 @@ screenshots and axe-core for accessibility checks. Knowledge and code live in
 2. **Every static frame is a poster.** Pause on any frame: type, space and image should look
    intentional. Motion amplifies a composition; it never rescues one.
 3. **One signature moment, executed perfectly.** Keep everything around it quiet and
-   precise. One unforgettable interaction beats ten competent effects.
+   precise. One unforgettable interaction beats ten competent effects. Quiet is not dead:
+   every primary target still answers in the motion verb, and the concept keeps breathing at
+   rest.
 4. **Continuous motion between states.** Loader into hero, page into page, list into case
    study. No hard cuts, and no "fade-up on every section" bolted on.
 5. **Usability is 30%.** Visitors should know where they are within 3 seconds. Hold 60 fps on
@@ -141,11 +143,12 @@ land here?" Change any part where the answer is yes, and note what you changed.
 4. **Tokens and content:** write the tokens from the system. Put content in one file
    (`src/data/site.ts`, following `references/content.md`) and write real, specific copy.
 5. **Compose pages.** Write semantic HTML first. Make the static layout complete and beautiful
-   with motion off. Then layer motion through the engine's data attributes, then build the
+   with motion off. Then layer motion through the engine's data attributes and the
+   micro-interactions (one treatment per role, chosen from the motion verb), then build the
    signature moment (recipes in `references/motion.md` and `references/webgl.md`). Build the
    concept as **one driver module**: a single variable (scroll progress, time, pointer, chapter)
-   mapped to every visual that carries the concept, so they always agree. See
-   `references/patterns.md`.
+   mapped to every visual that carries the concept, so they always agree. Give it an idle
+   input so the concept keeps a small motion going at rest. See `references/patterns.md`.
    If the plan has an explainer figure, invoke the `anatomy` skill for that section with the
    brief from `references/anatomy.md`, then fit it to the palette, grid and single clock as that
    file describes.
@@ -171,7 +174,7 @@ Always QA a **production build**, not the dev server:
 ```bash
 # Next.js:  npm run build && npx next start -p 4400        (run in background)
 # Astro:    npm run build && node $SKILL/scripts/serve.mjs dist --port 4400
-node $SKILL/scripts/shoot.mjs http://127.0.0.1:4400/ --crawl --nav   # screenshots, vitals, axe, keyboard
+node $SKILL/scripts/shoot.mjs http://127.0.0.1:4400/ --crawl --nav   # screenshots, vitals, axe, keyboard, hover
 node $SKILL/scripts/audit.mjs http://127.0.0.1:4400/ > .shots/audit.txt   # SEO/meta/a11y/weight/placeholders/tells
 ```
 
@@ -179,8 +182,8 @@ node $SKILL/scripts/audit.mjs http://127.0.0.1:4400/ > .shots/audit.txt   # SEO/
 - `--crawl` shoots one page of every type (home, each top-level page, one case page per
   collection) plus the 404, each to its end, into `.shots/<page>/`. Inner pages and end states
   hide the worst bugs. Pass a single URL without `--crawl` to re-shoot one page while fixing.
-- **Look at every screenshot**: desktop, mobile, reduced-motion, keyboard-focus (`k-*`) and
-  transition frames. Read `.shots/summary.json`, then each `report.json`, for:
+- **Look at every screenshot**: desktop, mobile, reduced-motion, keyboard-focus (`k-*`),
+  hover (`h-*`) and transition frames. Read `.shots/summary.json`, then each `report.json`, for:
   - console errors and failed requests
   - overflow, small tap targets, and text hidden under reduced motion
   - loader time, LCP and CLS (`mobile.vitals` is measured on a throttled mid-range phone and
@@ -189,6 +192,12 @@ node $SKILL/scripts/audit.mjs http://127.0.0.1:4400/ > .shots/audit.txt   # SEO/
   - `a11y`: axe violations, including contrast with the measured ratios
   - `keyboard`: tab order, whether a skip link comes first, focus with no visible style, and
     focus landing on invisible elements
+  - `hover`: how each pointer target reacts (`moves`, `color`, `pixels`, `masked` when a live
+    shader hides it, or `none`, with the properties that changed) and its clipped `h-NN-rest` / `h-NN-hover` pair; `colorOnly`
+    (primary targets whose hover is only a color swap), `noHoverChange`, and `covered`
+    (targets something else sat on top of)
+  - `desktop.idleMotion` and `idleAt`: whether anything moves while the pointer is still, and
+    where it was found
 - Run the failure checklist in `references/quality.md`.
 - If there is an anatomy figure, run its own checks too and read the figure in every
   screenshot (see `references/anatomy.md`, QA).
@@ -207,10 +216,15 @@ node $SKILL/scripts/audit.mjs http://127.0.0.1:4400/ > .shots/audit.txt   # SEO/
   - no horizontal overflow
   - no text hidden under reduced motion
   - zero serious or critical axe violations, and every focus stop visible
+  - `noHoverChange` empty, and every `colorOnly`, `pixels` and `masked` pair read by eye: a fill that
+    floods or inverts the whole button is a treatment; a primary link whose text only changes
+    color is not
+  - `idleMotion` true, or a still page written down as a decision in `DESIGN.md`
   - mobile LCP under 2.5 s and CLS under 0.05
   - smooth FPS
   - every critic score at 8 or above, with concrete evidence
-- Final pass: "remove one accessory". Cut the weakest effect.
+- Final pass: "remove one accessory". Cut the weakest decorative effect. Hover, press and
+  focus feedback are not accessories; restyle them, never cut them.
 
 ### Phase 5: Ship
 
@@ -239,7 +253,14 @@ confirms.
 - Small UI text (nav, meta, captions) can be 12 to 14 px if contrast passes AA. Labels carry
   real information, not decoration.
 - Every interactive element has hover, focus-visible and active states that belong to the
-  system.
+  system. Primary targets (CTAs, nav, project links, work images) answer in the concept's
+  motion verb, not with a color swap alone. Utility links (legal, cookie, social) may just
+  change color. Pick one treatment per role from `references/motion.md` and reuse it; don't
+  ship every effect on the menu. Inline links in body text keep an underline at rest.
+- The system that carries the concept has an idle state: it keeps moving, slowly and slightly,
+  while the visitor does nothing (on the one clock, paused off screen, off under reduced
+  motion). Never add a decorative wobble just to pass a check. A quiet brief may stay still at
+  rest if its hovers and signature carry the life; write that in `DESIGN.md`.
 - Use one easing family (the engine's `ease`). Big things move slower than small things.
   Stagger by 20 to 80 ms.
 
@@ -318,13 +339,13 @@ are legitimate when they carry real information and are executed with care.
 |---|---|
 | `references/quality-bar.md` | Before Phase 1 (once) and in every QA pass (rubric) |
 | `references/concepts.md` | Phase 1 |
-| `references/art-direction.md` | Phase 2 (archetypes, palettes, observed patterns, defaults to avoid) |
+| `references/art-direction.md` | Phase 2 (archetypes, palettes, observed patterns, interaction patterns from live winners, defaults to avoid) |
 | `references/typography.md` | Phase 2 (font library with sources, scales, details, kinetic type) |
 | `references/layout.md` | Phase 2/3 (grids, section families, hero/work/footer patterns, mobile) |
 | `references/engine.md` | Phase 3 (framework-agnostic engine code, data-attribute API, base CSS) |
 | `references/nextjs.md` | Phase 3 on Next.js (adapter, layout, metadata, fonts, images, pitfalls) |
 | `references/astro.md` | Phase 3 on Astro (adapter, layout, config, pitfalls) |
-| `references/motion.md` | Phase 3 (choreography; loader, transition, hover and scroll recipes) |
+| `references/motion.md` | Phase 3 (choreography; micro-interactions, idle state; loader, transition, hover and scroll recipes) |
 | `references/webgl.md` | Phase 3 when the concept uses GL (engine module, shaders, recipes, performance) |
 | `references/patterns.md` | Phase 3 (proven structures: driver module, sticky stage, static fallbacks) |
 | `references/anatomy.md` | Phase 2/3 when the site explains how something works (with or without the `anatomy` skill installed) |

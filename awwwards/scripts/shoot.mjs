@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // Visual QA: screenshots a running site the way a visitor experiences it (any framework).
-//   node shoot.mjs <url> [--out .shots] [--steps 6] [--nav] [--crawl] [--max 8] [--tabs 12] [--no-throttle]
+//   node shoot.mjs <url> [--out .shots] [--steps 6] [--nav] [--crawl] [--max 8] [--tabs 12] [--hovers 8] [--no-throttle]
 // Per page: desktop frames (loader end + scroll steps), mobile frames on a throttled mid-range
-// phone (4x CPU, slow 4G), reduced-motion frames, keyboard-focus frames, optional page-transition
-// frames (--nav clicks the first internal link), plus report.json with console errors, failed
-// requests, LCP/CLS, FPS, layout metrics, axe-core violations and the tab order.
+// phone (4x CPU, slow 4G), reduced-motion frames, keyboard-focus frames, rest/hover pairs per
+// pointer target, optional page-transition frames (--nav clicks the first internal link), plus
+// report.json with console errors, failed requests, LCP/CLS, FPS, layout metrics, axe-core
+// violations, the tab order, how each hover target reacts, and whether anything moves at rest.
+// The hover pass adds about 3 s per target; --hovers 0 skips the targets (idle check still runs).
 // --crawl shoots one page of every type plus the 404 into <out>/<page>/ and writes summary.json.
 // Read every PNG it writes.
 import fs from 'node:fs';
@@ -13,13 +15,14 @@ import { createRequire } from 'node:module';
 import { launch } from './browser.mjs';
 
 const args = process.argv.slice(2);
-const valued = ['--out', '--steps', '--max', '--tabs'];
+const valued = ['--out', '--steps', '--max', '--tabs', '--hovers'];
 const url = args.find((a, i) => !a.startsWith('--') && !valued.includes(args[i - 1]));
-if (!url) { console.error('usage: node shoot.mjs <url> [--out dir] [--steps n] [--nav] [--crawl] [--max n] [--tabs n] [--no-throttle]'); process.exit(1); }
+if (!url) { console.error('usage: node shoot.mjs <url> [--out dir] [--steps n] [--nav] [--crawl] [--max n] [--tabs n] [--hovers n] [--no-throttle]'); process.exit(1); }
 const opt = (k, d) => { const i = args.indexOf(`--${k}`); return i > -1 ? args[i + 1] : d; };
 const outRoot = path.resolve(opt('out', '.shots'));
 const steps = parseInt(opt('steps', '6'), 10);
 const tabs = parseInt(opt('tabs', '12'), 10);
+const hovers = parseInt(opt('hovers', '8'), 10);
 const nav = args.includes('--nav');
 const crawl = args.includes('--crawl');
 const throttle = !args.includes('--no-throttle');
@@ -181,6 +184,178 @@ async function keyboard(page, shot) {
   };
 }
 
+// Point at things like a mouse user. Picks varied targets (engine-marked ones first, then
+// buttons, then links in content, nav and footer, one per class signature) and moves the pointer
+// onto each, off-center (magnetic pull is zero at the exact center), after checking that the
+// target is really what sits under the pointer. A target reacts if its computed style changes
+// (element, pseudo-elements, descendants, cursor follower) or the pixels around it change by more
+// than the page's own idle motion. Both are needed: a finished letter roll looks identical to
+// rest but its transforms changed, while a shader hover changes pixels but not the target's style.
+// The changed properties tell a color swap from movement: a primary target (a link or button
+// that is not legal, cookie, social or small footer text) whose hover only changes color lands
+// in `colorOnly`, a list to review by eye (a full fill or inversion is a real treatment, a
+// text-color swap is not). When the area already moves at rest (a live shader) and no style
+// changed, pixels can't tell a hover apart: the target is `masked`, judged from its pair. Each
+// target is saved as a clipped pair, h-NN-rest.png and h-NN-hover.png, at the same coordinates.
+// Also records whether anything moves while the pointer is still, at the top and further down.
+const COLOR_PROPS = new Set(['color', 'backgroundColor', 'borderColor', 'textDecorationLine', 'textDecorationColor']);
+async function hover(page, save) {
+  // Fraction of pixels that differ between two PNG buffers, decoded on a blank page (no CSP).
+  // `r` limits the comparison to a region of the images (x, y, width, height in image pixels).
+  const scratch = await page.context().newPage();
+  const pxDiff = (a, b, r = null) => scratch.evaluate(async ([a, b, r]) => {
+    const read = async (s) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${s}`;
+      await img.decode();
+      const c = new OffscreenCanvas(img.width, img.height);
+      const x = c.getContext('2d');
+      x.drawImage(img, 0, 0);
+      const { x: rx, y: ry, width: rw, height: rh } = r || { x: 0, y: 0, width: img.width, height: img.height };
+      return x.getImageData(rx, ry, Math.max(1, rw), Math.max(1, rh)).data;
+    };
+    const [A, B] = await Promise.all([read(a), read(b)]);
+    if (A.length !== B.length) return 1;
+    let n = 0;
+    for (let i = 0; i < A.length; i += 4) if (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2]) > 40) n++;
+    return n / (A.length / 4);
+  }, [a.toString('base64'), b.toString('base64'), r]);
+
+  // Idle: pointer parked mid-left edge (the corners hold UI), cursor follower masked, after
+  // intros and the follower have settled. Sampled at the top, then lower down if nothing moved.
+  const mask = [page.locator('#cursor')];
+  const still = async () => {
+    await page.mouse.move(2, 450);
+    await page.waitForTimeout(1500);
+    const a = await page.screenshot({ mask });
+    await page.waitForTimeout(1500);
+    return (await pxDiff(a, await page.screenshot({ mask }))) > 0.0005;
+  };
+  let idleAt = (await still()) ? 'top' : null;
+  if (!idleAt) {
+    const room = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+    for (const f of room > 200 ? [0.35, 0.7] : []) {
+      await wheelTo(page, Math.round(room * f));
+      if (await still()) { idleAt = `${Math.round(f * 100)}%`; break; }
+    }
+    if (room > 200) await wheelTo(page, 0);
+  }
+
+  const targets = await page.evaluate((max) => {
+    const sel = 'a[href], button, [role="button"], [data-magnetic], [data-cursor], [data-gl]';
+    const rank = (e) => (e.matches('[data-cursor], [data-magnetic], [data-gl]') ? 0 : e.matches('button, [role="button"]') ? 1 : e.closest('main') ? 2 : 3);
+    // Utility links may answer with color alone: legal, cookie, social, small footer text.
+    const utility = (e) => {
+      const href = e.getAttribute('href') || '';
+      if (/privacy|legal|cookie|terms|imprint|impressum|colophon/i.test(href)) return true;
+      if (/\/\/(www\.)?(instagram|twitter|x|linkedin|github|dribbble|behance|vimeo|youtube|tiktok|threads|bsky|mastodon|facebook|read)\.(com|net|app|social|cv)\b/i.test(href)) return true;
+      return !!e.closest('footer') && rank(e) > 0 && parseFloat(getComputedStyle(e).fontSize) < 16;
+    };
+    const control = 'a[href], button, [role="button"]';
+    // Visible text with spaces between nodes (innerText needs layout; clones have none).
+    const text = (e) => {
+      const parts = [];
+      const walk = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) if (!n.parentElement.closest('[aria-hidden="true"]')) parts.push(n.textContent);
+      return parts.join(' ').replace(/\s+/g, ' ').replace(/ ([,.;:!?])/g, '$1').trim();
+    };
+    const media = (e) => e.querySelector('img[alt]')?.getAttribute('alt') || e.querySelector('[role="img"][aria-label]')?.getAttribute('aria-label') || '';
+    const seen = new Set();
+    const picked = [];
+    const all = [...document.querySelectorAll(sel)].filter((e) => {
+      if (e.closest('[aria-hidden="true"], [hidden], #cursor, #curtain, #loader')) return false;
+      // An image or cursor zone inside a link is tested through that link.
+      if (!e.matches(control) && e.parentElement?.closest(control)) return false;
+      const r = e.getBoundingClientRect();
+      return r.width > 4 && r.height > 4 && getComputedStyle(e).visibility !== 'hidden';
+    });
+    all.sort((a, b) => rank(a) - rank(b));
+    for (const e of all) {
+      const sig = `${e.tagName}.${[...e.classList].sort().join('.')}|${e.closest('header, nav, footer, main')?.tagName || ''}`;
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      e.setAttribute('data-qa-hover', picked.length);
+      const interactive = e.matches(control);
+      picked.push({
+        i: picked.length,
+        interactive,
+        primary: interactive && !utility(e),
+        label: `${e.tagName.toLowerCase()} "${(text(e) || e.getAttribute('aria-label') || media(e) || e.getAttribute('href') || e.tagName).trim().replace(/\s+/g, ' ').slice(0, 40)}"`,
+      });
+      if (picked.length >= max) break;
+    }
+    const props = ['color', 'backgroundColor', 'borderColor', 'textDecorationLine', 'textDecorationColor', 'backgroundSize', 'backgroundPosition', 'opacity', 'transform', 'translate', 'scale', 'rotate', 'clipPath', 'filter', 'letterSpacing', 'boxShadow', 'fontVariationSettings'];
+    window.__hoverSnap = (e) => {
+      const snap = {};
+      const add = (key, el, pseudo) => { const cs = getComputedStyle(el, pseudo); for (const p of props) snap[`${key}:${p}`] = cs[p]; };
+      add('self', e);
+      add('before', e, '::before');
+      add('after', e, '::after');
+      [...e.querySelectorAll('*')].slice(0, 24).forEach((c, i) => add(`child${i}`, c));
+      const cursor = document.getElementById('cursor');
+      if (cursor) snap['cursor:follower'] = cursor.className;
+      return snap;
+    };
+    return picked;
+  }, hovers);
+
+  const results = [];
+  const covered = [];
+  for (const t of targets) {
+    const loc = page.locator(`[data-qa-hover="${t.i}"]`);
+    await loc.evaluate((e) => e.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(900);
+    const box = await loc.boundingBox();
+    if (!box || box.y + box.height < 0 || box.y > 900) continue;
+    const at = { x: box.x + box.width * 0.35, y: box.y + box.height * 0.4 };
+    const hit = await loc.evaluate((e, { x, y }) => { const h = document.elementFromPoint(x, y); return !!h && (h === e || e.contains(h)); }, at);
+    if (!hit) { covered.push(t.label); continue; }
+    const away = box.x > 720 ? { x: 2, y: 450 } : { x: 1438, y: 450 };
+    await page.mouse.move(away.x, away.y);
+    await page.waitForTimeout(600);
+    const x = Math.max(0, box.x - 24);
+    const y = Math.max(0, box.y - 24);
+    const clip = { x, y, width: Math.min(box.x + box.width + 24, 1440) - x, height: Math.min(box.y + box.height + 24, 900) - y };
+    const restStyle = await loc.evaluate((e) => window.__hoverSnap(e));
+    const rest1 = await page.screenshot({ clip });
+    await page.waitForTimeout(700);
+    const rest2 = await page.screenshot({ clip });
+    await page.mouse.move(at.x, at.y, { steps: 8 });
+    await page.waitForTimeout(700);
+    const hoverStyle = await loc.evaluate((e) => window.__hoverSnap(e));
+    const hovered = await page.screenshot({ clip });
+    // Pixels are judged inside the target's own box: the saved pairs keep a margin for context,
+    // but a moving neighbour in that margin must not hide a dead link.
+    const ox = Math.max(0, Math.round(box.x - x));
+    const oy = Math.max(0, Math.round(box.y - y));
+    const own = {
+      x: ox, y: oy,
+      width: Math.max(1, Math.floor(Math.min(box.x + box.width, x + clip.width) - x) - ox),
+      height: Math.max(1, Math.floor(Math.min(box.y + box.height, y + clip.height) - y) - oy),
+    };
+    const noise = await pxDiff(rest1, rest2, own);
+    const pixels = await pxDiff(rest2, hovered, own) > Math.max(0.01, noise * 2);
+    const changed = [...new Set(Object.keys(restStyle).filter((k) => restStyle[k] !== hoverStyle[k]).map((k) => k.split(':')[1]))];
+    const react = changed.length ? (changed.every((p) => COLOR_PROPS.has(p)) ? 'color' : 'moves')
+      : pixels ? 'pixels' : noise > 0.05 ? 'masked' : 'none';
+    const n = `h-${String(results.length + 1).padStart(2, '0')}`;
+    save(`${n}-rest`, rest2);
+    save(`${n}-hover`, hovered);
+    results.push({ shot: n, label: t.label, interactive: t.interactive, primary: t.primary, react, changed });
+  }
+  await scratch.close();
+  const cursorFollower = await page.evaluate(() => !!document.querySelector('#cursor.is-ready'));
+  return {
+    targets: results,
+    noHoverChange: results.filter((r) => r.interactive && r.react === 'none').map((r) => `${r.shot} ${r.label}`),
+    colorOnly: results.filter((r) => r.primary && r.react === 'color').map((r) => `${r.shot} ${r.label}`),
+    covered,
+    cursorFollower,
+    idleMotion: !!idleAt,
+    idleAt,
+  };
+}
+
 async function shootPage(browser, axeSource, url, out) {
   fs.mkdirSync(out, { recursive: true });
   for (const f of fs.readdirSync(out)) if (f.endsWith('.png')) fs.rmSync(path.join(out, f));
@@ -188,6 +363,11 @@ async function shootPage(browser, axeSource, url, out) {
   const shot = async (page, name) => {
     const file = path.join(out, `${name}.png`);
     await page.screenshot({ path: file });
+    report.files.push(file);
+  };
+  const save = (name, buf) => {
+    const file = path.join(out, `${name}.png`);
+    fs.writeFileSync(file, buf);
     report.files.push(file);
   };
   // Shooting a missing URL on purpose (to review the 404 page) is not an error.
@@ -273,6 +453,21 @@ async function shootPage(browser, axeSource, url, out) {
     await ctx.close();
   }
 
+  // Hover: a fresh load, the pointer still for a moment, then onto each target.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    watch(page, 'hover');
+    await page.goto(url, { waitUntil: 'load' });
+    await page.waitForFunction(loaderGone, null, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(2200);
+    const { idleMotion, idleAt, ...h } = await hover(page, save);
+    report.desktop.idleMotion = idleMotion;
+    report.desktop.idleAt = idleAt;
+    report.hover = h;
+    await ctx.close();
+  }
+
   // Mobile, on a mid-range phone: 4x CPU slowdown and slow 4G, like Lighthouse's mobile run.
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
@@ -349,6 +544,9 @@ const brief = (name, r) => ({
   skipLinkFirst: r.keyboard?.skipLinkFirst ?? null,
   noVisibleFocus: r.keyboard?.noVisibleFocus?.length ?? null,
   invisibleFocus: r.keyboard?.invisibleFocus?.length ?? null,
+  noHoverChange: r.hover?.noHoverChange?.length ?? null,
+  colorOnly: r.hover?.colorOnly?.length ?? null,
+  idleMotion: r.desktop.idleMotion ?? null,
 });
 
 const browser = await launch();

@@ -70,6 +70,7 @@ field.
 | Tiny targets | footer social links 18 px tall | shoot report lists small targets by name |
 | Loader over budget | 1.3 s exit on top of 1.7 s progress = 3 s | `loaderMs` in shoot report ≤ 2600 |
 | GL images render as empty boxes | an opaque CSS background on the `<figure>` painted over the canvas below | engine forces `background: none` on `[data-gl]`; shoot reports `glHidden` |
+| Site felt static | primary hovers were color swaps; the concept froze when scrolling stopped | one treatment per role from the verb, and an idle input on the driver (motion.md, patterns.md); shoot reports `hover.colorOnly` and `idleMotion` |
 | Cursor preview stuck on screen | `pointerleave` never fires when the page scrolls under a still pointer | check `elementFromPoint` on scroll (recipe fixed in motion.md) |
 | Header invisible over a light photo | white UI over a full-bleed print | `mix-blend-mode: difference` on fixed UI, scrims under titles |
 | Page weight looked like 5 MB | audit summed every responsive variant in the build | audit now estimates per page from referenced `src` |
@@ -82,6 +83,8 @@ field.
 - [ ] Throttled mobile: `mobile.vitals.lcpMs` < 2500, `cls` < 0.05, `mobile.loaderMs` reviewed (a loader that is fine on desktop can run 4 s on a phone)
 - [ ] `a11y`: 0 serious or critical axe violations; every `contrastNeedsReview` node checked by eye in the screenshots (text over images and canvas)
 - [ ] `keyboard`: skip link first, `noVisibleFocus` and `invisibleFocus` empty, not `stuck`; `k-*` frames show a ring in the system's style
+- [ ] `hover`: `noHoverChange` empty; every `h-NN-rest` / `h-NN-hover` pair read; each `colorOnly`, `pixels` and `masked` target judged by eye (a full fill or inversion passes, a text-color swap on a primary link does not); `covered` targets checked by hand
+- [ ] `desktop.idleMotion` true, or the still page written down as a decision in `DESIGN.md`
 - [ ] Every screenshot read; hero frame works as a poster; mobile frames composed
 - [ ] Navigation transition frames reviewed; menu opens, traps focus and closes on Escape (try it by hand)
 - [ ] Critic subagent's scores all ≥ 8, and its one-line reading of the idea matches the Concept Card

@@ -17,23 +17,25 @@ const map = (p: number) => ({ /* derive everything from p: dark, label, uniform,
 
 const uniforms = { uState: { value: 0 } };       // the shader reads these objects by reference
 let targets: HTMLElement[] = [];
-function apply(p: number) {
-  const s = map(p);
+let current = 0;                                 // latest driver value (the idle hookup reads it)
+function apply(p: number, drift = 0) {           // drift: the idle input, see below
+  const s = map(p);                              // discrete state from the real value only,
+  const c = drift ? map(p + drift) : s;          // so a drift near a threshold never flickers
   document.documentElement.classList.toggle('is-dark', s.dark);    // global ink switch
   const label = document.querySelector('[data-label]');
-  if (label) label.textContent = s.label;                          // UI that narrates the state
-  uniforms.uState.value = s.uniform;                               // GL follows the same variable
-  for (const el of targets) el.style.transform = s.transform;      // concept transforms (cheap props only)
+  if (label && label.textContent !== s.label) label.textContent = s.label; // UI that narrates the state
+  uniforms.uState.value = c.uniform;                               // GL follows the same variable
+  for (const el of targets) el.style.transform = c.transform;      // concept transforms (cheap props only)
 }
 // A page can pin its state (404 at night, a case page in its own chapter):
 const pinned = () => { const v = document.querySelector<HTMLElement>('[data-state]')?.dataset.state; return v ? +v : null; };
 
 export function startConcept() {                 // call from setupMotion
   setBackground(FRAG, uniforms);                 // returns null without GL: the static fallback takes over
-  onScroll(({ progress }) => apply(pinned() ?? progress));
+  onScroll(({ progress }) => apply((current = pinned() ?? progress)));
   onPage(() => {
     targets = [...document.querySelectorAll<HTMLElement>('[data-concept]')];
-    apply(pinned() ?? 0);
+    apply((current = pinned() ?? 0));
     return () => { targets = []; };
   });
 }
@@ -45,6 +47,12 @@ real time (the local hour, which personalizes revisits), or audio level (opt-in)
 Add a little pointer influence on top of the scroll driver (for example ±12% of the light
 angle). That way the signature reacts before the visitor scrolls, which is the first thing
 people try.
+
+Add an **idle input** too: a slow term from `gsap.ticker` time (a drifting light, a second
+hand, a breathing exposure) passed to `apply` as `drift`, small enough that the state stays
+readable. With it, the concept keeps moving while the visitor reads, instead of freezing the
+moment they stop scrolling. `references/motion.md` ("Idle state") has the rules, the `idle`
+module and the ticker hookup, which pauses off screen and stays at rest under reduced motion.
 
 ## 2. Sticky stage hero (the signature plays while the hero is in view)
 
