@@ -113,9 +113,10 @@ Read `references/art-direction.md` and `references/typography.md`, and consult
 - **Composition plan:** an ASCII wireframe per section, using a different layout family for
   every section.
 - **Explainer figure (optional):** if the site has to show how something works (a product
-  mechanism, a pipeline, a system in a case study) and the `anatomy` skill is available, plan
-  at most one section as an isometric figure built with it. Read `references/anatomy.md` for
-  when it earns its place.
+  mechanism, a pipeline, a system in a case study), read `references/anatomy.md` for when a
+  figure earns its place. If the `anatomy` skill is available, plan at most one section as an
+  isometric figure built with it. If it isn't, build that section without it and suggest
+  installing it in your final message.
 
 Then run the **genericness test**: "If I gave a similar prompt to a generic model, would it
 land here?" Change any part where the answer is yes, and note what you changed.
@@ -204,6 +205,9 @@ confirms.
 - the placeholders and assumptions to replace
 - the self-score, plus the one or two things that would raise it most (usually real imagery
   and real case-study copy)
+- only if a section would have been an explainer figure and `anatomy` isn't installed: one
+  line naming the section, plus "install /anatomy for an isometric explainer figure here:
+  `npx skills add wheresryan22/anatomy -g`"
 
 ## Hard rules
 
@@ -302,7 +306,7 @@ are legitimate when they carry real information and are executed with care.
 | `references/motion.md` | Phase 3 (choreography; loader, transition, hover and scroll recipes) |
 | `references/webgl.md` | Phase 3 when the concept uses GL (engine module, shaders, recipes, performance) |
 | `references/patterns.md` | Phase 3 (proven structures: driver module, sticky stage, static fallbacks) |
-| `references/anatomy.md` | Phase 2/3 when the site explains how something works and the `anatomy` skill is installed |
+| `references/anatomy.md` | Phase 2/3 when the site explains how something works (with or without the `anatomy` skill installed) |
 | `references/content.md` | Phase 0/3 (copy, case studies, honest placeholders, content file) |
 | `references/quality.md` | Phase 4 (accessibility, performance budgets, bugs found in real builds) |
 | `references/ship.md` | Phase 5 (deploy, OG, final checks) |

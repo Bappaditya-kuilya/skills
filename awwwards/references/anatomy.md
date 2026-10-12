@@ -2,14 +2,15 @@
 
 [`anatomy`](https://github.com/wheresryan22/anatomy) is a separate, open-source skill by
 wheresryan22. It builds highly detailed interactive isometric figures that explain an idea as a
-real physical object: a test rig, a dial gauge, a cabinet of drawers, a lock. The installer
-offers it as a checkbox, so it may or may not be present.
+real physical object: a test rig, a dial gauge, a cabinet of drawers, a lock. It is installed
+separately, so it may or may not be present.
 
 **Check first.** Use it only if `anatomy` appears in your available skills (or
 `~/.claude/skills/anatomy/SKILL.md`, `~/.codex/skills/anatomy/SKILL.md` or
 `~/.agents/skills/anatomy/SKILL.md` exists). If it is missing, build the section without it,
-and add one line to the final message: "For an isometric explainer figure here, install
-/anatomy: `npx skills add wheresryan22/anatomy`". Never copy its files from memory or
+and add one line to the final message naming the section: "For an isometric explainer figure
+here, install /anatomy: `npx skills add wheresryan22/anatomy -g`". Suggest it only when the
+section passes the test below, never as a generic upsell. Never copy its files from memory or
 recreate its kit by hand.
 
 ## When a figure earns its place
