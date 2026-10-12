@@ -17,9 +17,15 @@ export default function Home() {
         <h2 data-split="lines" style={{ fontSize: 'var(--t-xl)' }}>Selected work</h2>
         {projects.map((p) => (
           <Link key={p.slug} href={`/work/${p.slug}/`} data-cursor="Open" style={{ display: 'grid', gap: '1rem', maxWidth: '60rem' }}>
-            <figure data-gl style={{ aspectRatio: '3 / 2', overflow: 'clip' }}>
-              <Image src={p.img} alt={p.alt} width={1600} height={1067} sizes="(max-width: 768px) 100vw, 60rem" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </figure>
+            {p.cover.src ? (
+              <figure data-gl style={{ aspectRatio: '3 / 2', overflow: 'clip' }}>
+                <Image src={p.cover.src} alt={p.cover.alt} width={1600} height={1067} sizes="(max-width: 768px) 100vw, 60rem" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </figure>
+            ) : (
+              <figure data-gl="procedural" data-seed={p.cover.seed} data-colors={site.glPalette.join(',')} style={{ aspectRatio: '3 / 2', overflow: 'clip' }}>
+                <div className="gl-fallback" role="img" aria-label={p.cover.alt} />
+              </figure>
+            )}
             <span style={{ fontSize: 'var(--t-l)' }}>{p.title}, {p.year}</span>
           </Link>
         ))}
