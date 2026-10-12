@@ -227,15 +227,20 @@ awwwards/
     typography.md     curated free fonts with sources, scales, setting display type
     layout.md         grids, section families, heroes, mobile composition
     motion.md         choreography and recipes (loader handoff, iris, shared element, index preview…)
-    webgl.md          DOM-synced image planes, fullscreen shaders, performance rules
+    webgl.md          DOM-synced image planes, fullscreen shaders, performance rules  (generated)
     patterns.md       proven structures from test builds (driver module, sticky stage…)
     content.md        voice, honest placeholders, case-study structure
     quality.md        accessibility, performance budgets, bugs found in real builds
-    engine.md         framework-agnostic motion engine
-    nextjs.md         Next.js adapter, layout, metadata, fonts
-    astro.md          Astro adapter and layout
+    engine.md         framework-agnostic motion engine          (generated)
+    nextjs.md         Next.js adapter, layout, metadata, fonts  (generated)
+    astro.md          Astro adapter and layout                  (generated)
     ship.md           final checks and deploy
   scripts/            Node helpers, no dependencies except Playwright (and axe-core) for screenshots
+tests/
+  nexttest/           Next.js app the generated references are copied from
+  astrotest/          Astro app, same engine
+  _gen/               templates and build.py that write the generated references
+  smoke.mjs           browser smoke test run against both fixtures in CI
 .claude-plugin/       Claude Code plugin marketplace
 .github/              CI workflow, issue and PR templates
 ```
@@ -255,11 +260,14 @@ patterns in `awwwards/references/`.
 1. Fork the repo and create a branch.
 2. Make the change. A skill is a folder with a `SKILL.md`; the skills CLI finds any top-level
    folder that has one. For the Claude Code plugin, also add an entry to
-   `.claude-plugin/marketplace.json`.
+   `.claude-plugin/marketplace.json`. Engine and stack code lives in `tests/nexttest` and
+   `tests/astrotest`, not in the markdown: edit it there and run `python tests/_gen/build.py`
+   (see `tests/README.md`).
 3. Test it: `npx skills add . -g -a claude-code`, then run the skill in an agent.
 4. Open a pull request. The template asks what changed and what you built to check it; CI
    checks script syntax, `SKILL.md` frontmatter, the plugin marketplace and that the skills
-   CLI finds every skill, on Linux, macOS and Windows.
+   CLI finds every skill, on Linux, macOS and Windows. It also builds and smoke-tests both fixture
+   apps and fails if the generated references are out of date.
 
 ## Support
 

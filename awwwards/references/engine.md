@@ -1,3 +1,4 @@
+<!-- Generated from tests/nexttest by tests/_gen/build.py; edit there, not here. -->
 # Motion engine (framework-agnostic)
 
 The plumbing that award-level sites get wrong, solved once:

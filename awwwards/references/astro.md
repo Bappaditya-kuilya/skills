@@ -1,3 +1,4 @@
+<!-- Generated from tests/astrotest by tests/_gen/build.py; edit there, not here. -->
 # Astro
 
 Use Astro when the site is a content-only showcase and motion is the product: a WebGL-heavy

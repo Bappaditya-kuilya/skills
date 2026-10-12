@@ -1,3 +1,4 @@
+<!-- Generated from tests/nexttest by tests/_gen/build.py; edit there, not here. -->
 # Next.js (App Router)
 
 The default stack. Every file below was built and run under Next 16 with React 19, including

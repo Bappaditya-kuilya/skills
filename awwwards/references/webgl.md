@@ -1,3 +1,4 @@
+<!-- Generated from tests/nexttest by tests/_gen/build.py; edit there, not here. -->
 # WebGL
 
 WebGL is standard on award-winning sites (6 of 7 recent Site of the Day portfolios). It is
