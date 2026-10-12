@@ -4,12 +4,20 @@
 
 **An agent skill that builds award-caliber websites from one line.**
 
-[![CI](https://img.shields.io/github/actions/workflow/status/juliobsz/skills/ci.yml?branch=main&label=CI&labelColor=000000&color=0a0a0a&logo=githubactions&logoColor=white)](https://github.com/juliobsz/skills/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-0a0a0a?labelColor=000000)](LICENSE)
-[![Agent Skills](https://img.shields.io/badge/Agent_Skills-compatible-0a0a0a?labelColor=000000)](https://agentskills.io)
-[![Claude Code](https://img.shields.io/badge/Claude_Code-supported-0a0a0a?labelColor=000000&logo=claude&logoColor=white)](https://claude.com/claude-code)
-[![Codex](https://img.shields.io/badge/Codex-supported-0a0a0a?labelColor=000000)](https://github.com/openai/codex)
-[![skills.sh](https://skills.sh/b/juliobsz/skills)](https://skills.sh/juliobsz/skills)
+<p>
+  <a href="https://code.claude.com/docs/en/skills"><img src="https://img.shields.io/badge/Claude_Code-skill-1b1b19?style=flat-square&logo=claude&logoColor=white" alt="Claude Code skill"></a>
+  <a href="https://github.com/openai/codex"><img src="https://img.shields.io/badge/Codex-supported-1b1b19?style=flat-square" alt="Codex supported"></a>
+  <a href="https://agentskills.io"><img src="https://img.shields.io/badge/Agent_Skills-compatible-1b1b19?style=flat-square" alt="Agent Skills compatible"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-1b1b19?style=flat-square" alt="MIT license"></a>
+  <a href="#requirements"><img src="https://img.shields.io/badge/node-%E2%89%A5%2022.20-1b1b19?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node 22.20 or later"></a>
+  <a href="https://github.com/juliobsz/skills/actions/workflows/ci.yml"><img src="https://github.com/juliobsz/skills/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
+
+<p>
+  <a href="https://github.com/juliobsz/skills/archive/refs/heads/main.zip"><img src="https://img.shields.io/badge/Download-ZIP-1b1b19?style=for-the-badge&logo=github&logoColor=white" alt="Download ZIP"></a>
+  &nbsp;
+  <a href="#install"><img src="https://img.shields.io/badge/Install-npx_skills_add-d7d7d0?style=for-the-badge&labelColor=1b1b19&logo=npm&logoColor=white" alt="Install with npx skills add"></a>
+</p>
 
 [Demo](#demo) · [Install](#install) · [Usage](#usage) · [How it works](#how-it-works) · [Limits](#limits)
 
