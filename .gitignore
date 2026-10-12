@@ -1,0 +1,32 @@
+# Keep this repository limited to the actual skill.
+/*
+!/.gitignore
+!/awwwards/
+!/bin/
+!/package.json
+!/README.md
+!/LICENSE
+
+# Dependencies and generated site files (at any depth)
+node_modules/
+dist/
+.astro/
+.shots*/
+
+# Generated archives, smoke tests, and coverage
+*.tgz
+test-output/
+coverage/
+
+# Local environment and logs
+.env
+.env.*
+!.env.example
+!.env.sample
+*.log
+
+# Editor state, local plans, and OS files
+.idea/
+.junie/plans/
+.DS_Store
+Thumbs.db
