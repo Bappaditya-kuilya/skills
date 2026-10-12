@@ -325,7 +325,11 @@ export default async function Work({ params }: PageProps<'/work/[slug]'>) {
     <article style={{ padding: '18vh var(--gutter)', display: 'grid', gap: '8vh' }}>
       <h1 data-split="lines" data-intro style={{ fontSize: 'var(--t-xl)', lineHeight: 0.9 }}>{p.title}</h1>
       <figure data-gl data-gl-instant style={{ aspectRatio: '16 / 9' }}>
-        <Image src={p.img} alt={p.alt} width={1600} height={1067} loading="eager" fetchPriority="high" sizes="100vw" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {p.cover.src ? (
+          <Image src={p.cover.src} alt={p.cover.alt} width={1600} height={1067} loading="eager" fetchPriority="high" sizes="100vw" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div data-procedural-cover={p.cover.seed} role="img" aria-label={p.cover.alt} style={{ width: '100%', height: '100%' }} />
+        )}
       </figure>
       <p data-split="lines" style={{ maxWidth: '40ch', fontSize: 'var(--t-m)' }}>
         The case page enters behind the curtain, plays its own intro, and reverts cleanly when you leave it again.
